@@ -73,39 +73,78 @@ body {
     background-color: var(--bg-page);
     color: var(--text-main);
     margin: 0;
-    padding: 24px;
+    padding: 0;
     -webkit-font-smoothing: antialiased;
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
-.app-header {
+/* Top Navigation Bar */
+.top-navbar {
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
 }
 
-.app-title {
-    margin: 0;
-    font-size: 26px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
+.brand-section {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 16px;
+}
+
+.app-logo {
+    font-size: 20px;
+    font-weight: 800;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.project-selector-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-page);
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.project-select {
+    border: none;
+    background: transparent;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--primary);
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+/* Main Content Area */
+.main-container {
+    padding: 24px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 /* Controls Panel */
 .header-panel {
     background: var(--bg-card);
-    padding: 20px;
+    padding: 18px 20px;
     border-radius: var(--radius);
     border: 1px solid var(--border);
     box-shadow: var(--shadow-sm);
-    margin-bottom: 24px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
 }
 
 .controls-row {
@@ -148,8 +187,8 @@ textarea:focus {
 
 button,
 .file-upload-label {
-    padding: 9px 16px;
-    font-size: 14px;
+    padding: 8px 14px;
+    font-size: 13px;
     border-radius: 8px;
     border: none;
     cursor: pointer;
@@ -201,29 +240,34 @@ button,
     background: var(--bg-page);
     border: 1px solid var(--border);
     color: var(--text-main);
-    padding: 8px 12px;
+    padding: 6px 12px;
     border-radius: 8px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
 }
 
-/* Kanban Board */
-.board {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
+/* Kanban Board Horizon */
+.board-wrapper {
+    display: flex;
+    gap: 16px;
     align-items: flex-start;
+    overflow-x: auto;
+    padding-bottom: 16px;
+    flex: 1;
 }
 
 .column {
     background-color: var(--bg-board);
     border-radius: var(--radius);
     padding: 16px;
+    min-width: 320px;
+    width: 320px;
     min-height: 520px;
     display: flex;
     flex-direction: column;
     border: 2px dashed transparent;
+    flex-shrink: 0;
 }
 
 .column.drag-over {
@@ -235,12 +279,23 @@ button,
     font-size: 13px;
     text-transform: uppercase;
     color: var(--text-muted);
-    margin-bottom: 16px;
+    margin-bottom: 14px;
     font-weight: 700;
     display: flex;
     justify-content: space-between;
     align-items: center;
     letter-spacing: 0.5px;
+}
+
+.column-title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.column-actions {
+    display: flex;
+    gap: 4px;
 }
 
 .issue-count {
@@ -257,6 +312,30 @@ button,
     flex-direction: column;
     gap: 12px;
     flex: 1;
+    min-height: 100px;
+}
+
+.add-column-btn {
+    min-width: 220px;
+    height: 100px;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.add-column-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-light);
 }
 
 /* Tickets */
@@ -291,6 +370,12 @@ button,
     align-items: center;
 }
 
+.ticket-type-id {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .ticket-id {
     font-size: 12px;
     font-weight: 700;
@@ -316,6 +401,30 @@ button,
     overflow: hidden;
 }
 
+/* Subtasks Progress Bar */
+.subtasks-progress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.progress-bar-bg {
+    flex: 1;
+    height: 4px;
+    background: var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 999px;
+}
+
 .ticket-footer {
     display: flex;
     justify-content: space-between;
@@ -333,6 +442,30 @@ button,
     display: inline-flex;
     align-items: center;
     gap: 4px;
+}
+
+.story-points-badge {
+    background: var(--bg-page);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.assignee-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--primary-light);
+    color: var(--primary);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
 }
 
 .ticket-epic {
@@ -381,7 +514,7 @@ button,
     color: var(--text-main);
 }
 
-/* Modal Window */
+/* Modal Overlay & Dialog */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -407,7 +540,9 @@ button,
 .modal {
     background: var(--bg-card);
     width: 90%;
-    max-width: 520px;
+    max-width: 580px;
+    max-height: 90vh;
+    overflow-y: auto;
     border-radius: var(--radius);
     padding: 24px;
     box-shadow: var(--shadow-lg);
@@ -448,9 +583,40 @@ button,
     color: var(--text-muted);
 }
 
+/* Subtasks List in Modal */
+.subtasks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.subtask-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-page);
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+}
+
+.subtask-item.completed span {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+
+.add-subtask-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
 .modal-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-top: 10px;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
 }

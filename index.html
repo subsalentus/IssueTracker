@@ -4,105 +4,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Issue Tracker - App Trilhos Portugal</title>
+    <title>Issue Tracker - Jira Multi-Project Kanban</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-    <!-- Header Principal -->
-    <header class="app-header">
-        <h1 class="app-title">
-            <span>🚀</span> App Trilhos Portugal - Issue Tracker
-        </h1>
-        <button id="themeToggleBtn" class="theme-toggle-btn" onclick="toggleTheme()">🌙 Modo Escuro</button>
+    <!-- Barra de Navegação Superior (Nível de Workspace & Projetos) -->
+    <header class="top-navbar">
+        <div class="brand-section">
+            <h1 class="app-logo">
+                <span>🚀</span> IssueTracker
+            </h1>
+
+            <div class="project-selector-wrapper">
+                <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);">PROJETO:</span>
+                <select id="projectSelect" class="project-select" onchange="switchProject(this.value)"></select>
+                <button class="btn-secondary" onclick="openNewProjectModal()" title="Criar Novo Projeto">+ Novo Projeto</button>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="btn-danger" style="padding: 6px 10px; font-size: 12px;" onclick="deleteCurrentProject()" title="Eliminar Projeto Ativo">Eliminar Projeto</button>
+            <button id="themeToggleBtn" class="theme-toggle-btn" onclick="toggleTheme()">🌙 Modo Escuro</button>
+        </div>
     </header>
 
-    <!-- Painel de Controlos -->
-    <div class="header-panel">
-        <!-- Linha de Filtros e Ferramentas -->
-        <div class="controls-row">
-            <div class="filter-group">
-                <span>👁️ Épico:</span>
-                <select id="filterEpic" onchange="renderBoard()" style="border: none; background: transparent; font-weight: 600; padding: 0;">
-                    <option value="Todos">Todos os Épicos</option>
-                </select>
+    <!-- Conteúdo Principal -->
+    <main class="main-container">
+        <!-- Painel de Controlos e Filtros -->
+        <div class="header-panel">
+            <!-- Linha de Filtros e Import/Export -->
+            <div class="controls-row">
+                <div class="filter-group">
+                    <span>👁️ Épico:</span>
+                    <select id="filterEpic" onchange="renderBoard()" style="border: none; background: transparent; font-weight: 600; padding: 0;">
+                        <option value="Todos">Todos os Épicos</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <span>📑 Tipo:</span>
+                    <select id="filterType" onchange="renderBoard()" style="border: none; background: transparent; font-weight: 600; padding: 0;">
+                        <option value="Todos">Todos os Tipos</option>
+                        <option value="Task">Task 📑</option>
+                        <option value="Bug">Bug 🐛</option>
+                        <option value="Story">Story 📖</option>
+                        <option value="Epic">Epic ⚡</option>
+                        <option value="Feature">Feature 🌟</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <span>⚡ Prioridade:</span>
+                    <select id="filterPriority" onchange="renderBoard()" style="border: none; background: transparent; font-weight: 600; padding: 0;">
+                        <option value="Todos">Todas as Prioridades</option>
+                        <option value="Alta">Alta 🔴</option>
+                        <option value="Média">Média 🟡</option>
+                        <option value="Baixa">Baixa 🟢</option>
+                    </select>
+                </div>
+
+                <input type="text" id="searchInput" placeholder="🔍 Pesquisar tarefas por título, ID..." oninput="renderBoard()" style="flex: 1; min-width: 180px;">
+
+                <button class="btn-secondary" onclick="exportCSV()" title="Exportar dados para CSV">📥 Exportar CSV</button>
+                
+                <label class="btn-secondary file-upload-label" title="Importar ficheiro CSV">
+                    📂 Importar CSV
+                    <input type="file" id="csvFileInput" accept=".csv" onchange="importCSV(event)" style="display: none;">
+                </label>
+                
+                <button class="btn-danger" onclick="clearBoard()">Apagar Quadro</button>
             </div>
 
-            <div class="filter-group">
-                <span>⚡ Prioridade:</span>
-                <select id="filterPriority" onchange="renderBoard()" style="border: none; background: transparent; font-weight: 600; padding: 0;">
-                    <option value="Todos">Todas as Prioridades</option>
+            <div style="height: 1px; background: var(--border); width: 100%;"></div>
+
+            <!-- Linha de Criação Rápida de Tarefa -->
+            <div class="controls-row">
+                <select id="newType" style="width: 120px;">
+                    <option value="Task">Task 📑</option>
+                    <option value="Bug">Bug 🐛</option>
+                    <option value="Story">Story 📖</option>
+                    <option value="Epic">Epic ⚡</option>
+                    <option value="Feature">Feature 🌟</option>
+                </select>
+
+                <input type="text" id="newTitle" placeholder="O que precisa de ser feito?" required style="flex: 2; min-width: 240px;" onkeydown="if(event.key==='Enter') addTicket()">
+                
+                <select id="newEpic" style="flex: 1; min-width: 170px;">
+                    <option value="Epic 1: Geoespacial">Epic 1: Geoespacial</option>
+                    <option value="Epic 2: Backend">Epic 2: Backend</option>
+                    <option value="Epic 3: Hardware/Navegação">Epic 3: Hardware/Navegação</option>
+                    <option value="Outro">Outro</option>
+                </select>
+
+                <select id="newPriority" style="width: 120px;">
                     <option value="Alta">Alta 🔴</option>
-                    <option value="Média">Média 🟡</option>
+                    <option value="Média" selected>Média 🟡</option>
                     <option value="Baixa">Baixa 🟢</option>
                 </select>
+
+                <select id="newStoryPoints" style="width: 90px;" title="Pontos de História">
+                    <option value="1">1 pt</option>
+                    <option value="2">2 pt</option>
+                    <option value="3" selected>3 pt</option>
+                    <option value="5">5 pt</option>
+                    <option value="8">8 pt</option>
+                    <option value="13">13 pt</option>
+                </select>
+
+                <button class="btn-primary" onclick="addTicket()">+ Adicionar Tarefa</button>
             </div>
-
-            <input type="text" id="searchInput" placeholder="🔍 Pesquisar tarefas por título, ID..." oninput="renderBoard()" style="flex: 1; min-width: 200px;">
-
-            <button class="btn-secondary" onclick="exportCSV()" title="Exportar dados para CSV">📥 Exportar CSV</button>
-            
-            <label class="btn-secondary file-upload-label" title="Importar ficheiro CSV">
-                📂 Importar CSV
-                <input type="file" id="csvFileInput" accept=".csv" onchange="importCSV(event)" style="display: none;">
-            </label>
-            
-            <button class="btn-danger" onclick="clearBoard()">Apagar Tudo</button>
         </div>
 
-        <div style="height: 1px; background: var(--border); width: 100%;"></div>
-
-        <!-- Linha de Criação de Tarefa -->
-        <div class="controls-row">
-            <input type="text" id="newTitle" placeholder="O que precisa de ser feito?" required style="flex: 2; min-width: 260px;" onkeydown="if(event.key==='Enter') addTicket()">
-            
-            <select id="newEpic" style="flex: 1; min-width: 180px;">
-                <option value="Epic 1: Geoespacial">Epic 1: Geoespacial</option>
-                <option value="Epic 2: Backend">Epic 2: Backend</option>
-                <option value="Epic 3: Hardware/Navegação">Epic 3: Hardware/Navegação</option>
-                <option value="Outro">Outro</option>
-            </select>
-
-            <select id="newPriority" style="width: 130px;">
-                <option value="Alta">Alta 🔴</option>
-                <option value="Média" selected>Média 🟡</option>
-                <option value="Baixa">Baixa 🟢</option>
-            </select>
-
-            <button class="btn-primary" onclick="addTicket()">+ Adicionar Tarefa</button>
-        </div>
-    </div>
-
-    <!-- Quadro Kanban -->
-    <div class="board">
-        <!-- Coluna To Do -->
-        <div class="column" id="todo" ondragenter="dragEnter(event)" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event)">
-            <div class="column-header">
-                <span>To Do</span>
-                <span class="issue-count" id="count-todo">0</span>
-            </div>
-            <div class="tickets-container" id="container-todo"></div>
-        </div>
-
-        <!-- Coluna In Progress -->
-        <div class="column" id="in-progress" ondragenter="dragEnter(event)" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event)">
-            <div class="column-header">
-                <span>In Progress</span>
-                <span class="issue-count" id="count-in-progress">0</span>
-            </div>
-            <div class="tickets-container" id="container-in-progress"></div>
-        </div>
-
-        <!-- Coluna Done -->
-        <div class="column" id="done" ondragenter="dragEnter(event)" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event)">
-            <div class="column-header">
-                <span>Done</span>
-                <span class="issue-count" id="count-done">0</span>
-            </div>
-            <div class="tickets-container" id="container-done"></div>
-        </div>
-    </div>
+        <!-- Quadro Kanban (Colunas Dinâmicas) -->
+        <div class="board-wrapper" id="boardWrapper"></div>
+    </main>
 
     <!-- Modal de Edição de Tarefa -->
     <div class="modal-overlay" id="editModalOverlay">
@@ -112,16 +129,40 @@
                 <button class="icon-btn" onclick="closeModal()">✖️</button>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label>Título</label>
-                    <input type="text" id="editTitle" placeholder="Título da tarefa">
+                <div style="display: flex; gap: 12px;">
+                    <div class="form-group" style="width: 140px;">
+                        <label>Tipo</label>
+                        <select id="editType">
+                            <option value="Task">Task 📑</option>
+                            <option value="Bug">Bug 🐛</option>
+                            <option value="Story">Story 📖</option>
+                            <option value="Epic">Epic ⚡</option>
+                            <option value="Feature">Feature 🌟</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Título</label>
+                        <input type="text" id="editTitle" placeholder="Título da tarefa">
+                    </div>
                 </div>
+
                 <div class="form-group">
                     <label>Descrição</label>
                     <textarea id="editDescription" rows="3" placeholder="Descrição detalhada da tarefa..."></textarea>
                 </div>
-                <div style="display: flex; gap: 12px;">
-                    <div class="form-group" style="flex: 1;">
+
+                <!-- Subtarefas Checklist -->
+                <div class="form-group">
+                    <label>Checklist de Subtarefas</label>
+                    <div class="subtasks-list" id="modalSubtasksList"></div>
+                    <div class="add-subtask-row">
+                        <input type="text" id="newSubtaskInput" placeholder="Adicionar nova subtarefa..." style="flex:1;" onkeydown="if(event.key==='Enter') addSubtaskFromModal()">
+                        <button class="btn-secondary" onclick="addSubtaskFromModal()">+ Adicionar</button>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 1; min-width: 140px;">
                         <label>Épico</label>
                         <select id="editEpic">
                             <option value="Epic 1: Geoespacial">Epic 1: Geoespacial</option>
@@ -130,7 +171,8 @@
                             <option value="Outro">Outro</option>
                         </select>
                     </div>
-                    <div class="form-group" style="flex: 1;">
+
+                    <div class="form-group" style="flex: 1; min-width: 120px;">
                         <label>Prioridade</label>
                         <select id="editPriority">
                             <option value="Alta">Alta 🔴</option>
@@ -138,14 +180,29 @@
                             <option value="Baixa">Baixa 🟢</option>
                         </select>
                     </div>
+
+                    <div class="form-group" style="width: 110px;">
+                        <label>Story Points</label>
+                        <select id="editStoryPoints">
+                            <option value="1">1 pt</option>
+                            <option value="2">2 pt</option>
+                            <option value="3">3 pt</option>
+                            <option value="5">5 pt</option>
+                            <option value="8">8 pt</option>
+                            <option value="13">13 pt</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Estado</label>
-                    <select id="editStatus">
-                        <option value="todo">To Do</option>
-                        <option value="in-progress">In Progress</option>
-                        <option value="done">Done</option>
-                    </select>
+
+                <div style="display: flex; gap: 12px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Atribuído a</label>
+                        <input type="text" id="editAssignee" placeholder="Ex: Marcelo, Ana...">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Coluna (Estado)</label>
+                        <select id="editStatus"></select>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -153,6 +210,37 @@
                 <div style="display: flex; gap: 8px;">
                     <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
                     <button class="btn-primary" onclick="saveEditModal()">Guardar Alterações</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Criar Novo Projeto -->
+    <div class="modal-overlay" id="newProjectModalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Criar Novo Projeto</h3>
+                <button class="icon-btn" onclick="closeNewProjectModal()">✖️</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Chave do Projeto (Prefix de IDs)</label>
+                    <input type="text" id="newProjectKey" placeholder="Ex: MOB, WEB, API..." maxlength="6" style="text-transform: uppercase;">
+                </div>
+                <div class="form-group">
+                    <label>Nome do Projeto</label>
+                    <input type="text" id="newProjectName" placeholder="Ex: Aplicação Mobile iOS/Android">
+                </div>
+                <div class="form-group">
+                    <label>Descrição</label>
+                    <textarea id="newProjectDesc" rows="2" placeholder="Descrição rápida do projeto..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div></div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn-secondary" onclick="closeNewProjectModal()">Cancelar</button>
+                    <button class="btn-primary" onclick="saveNewProjectModal()">Criar Projeto</button>
                 </div>
             </div>
         </div>
