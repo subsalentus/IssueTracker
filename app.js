@@ -72,7 +72,6 @@ const DEFAULT_WORKSPACE = {
     ]
 };
 
-// Type Icons Mapping
 const ISSUE_TYPE_ICONS = {
     'Task': '📑',
     'Bug': '🐛',
@@ -81,27 +80,9 @@ const ISSUE_TYPE_ICONS = {
     'Feature': '🌟'
 };
 
-// Workspace State Management
-let workspace = JSON.parse(localStorage.getItem('trilhosWorkspace'));
-
-// Migration from old single-project structure if needed
-if (!workspace) {
-    const oldIssues = JSON.parse(localStorage.getItem('trilhosIssues'));
-    workspace = JSON.parse(JSON.stringify(DEFAULT_WORKSPACE));
-    if (oldIssues && Array.isArray(oldIssues) && oldIssues.length > 0) {
-        workspace.projects[0].issues = oldIssues.map(i => ({
-            type: 'Task',
-            storyPoints: 1,
-            assignee: 'User',
-            subtasks: [],
-            ...i
-        }));
-    }
-    saveWorkspace();
-}
-
+let workspace = JSON.parse(localStorage.getItem('trilhosWorkspace')) || JSON.parse(JSON.stringify(DEFAULT_WORKSPACE));
 let draggedTicketId = null;
-let currentEditingId = null;
+let currentEditingId = null; // null if creating new ticket, string ID if editing
 
 // Theme Initialization
 const savedTheme = localStorage.getItem('trilhosTheme') || 'light';
@@ -118,7 +99,7 @@ function toggleTheme() {
 
 function updateThemeButtonText(theme) {
     const btn = document.getElementById('themeToggleBtn');
-    if (btn) btn.innerHTML = theme === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Escuro';
+    if (btn) btn.innerHTML = theme === 'dark' ? '☀️' : '🌙';
 }
 
 function getActiveProject() {
@@ -134,7 +115,34 @@ function saveWorkspace() {
     localStorage.setItem('trilhosWorkspace', JSON.stringify(workspace));
 }
 
-// Project Switching & Creation
+// UI Toggles
+function toggleFilterBar() {
+    const filterToolbar = document.getElementById('filterToolbar');
+    filterToolbar.classList.toggle('show');
+}
+
+function toggleActionsDropdown() {
+    const menu = document.getElementById('actionsDropdown');
+    menu.classList.toggle('show');
+}
+
+// Close dropdown when clicking outside
+window.addEventListener('click', (e) => {
+    if (!e.target.closest('.dropdown')) {
+        const menu = document.getElementById('actionsDropdown');
+        if (menu) menu.classList.remove('show');
+    }
+});
+
+function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('filterEpic').value = 'Todos';
+    document.getElementById('filterType').value = 'Todos';
+    document.getElementById('filterPriority').value = 'Todos';
+    renderBoard();
+}
+
+// Project Selector
 function renderProjectSelector() {
     const select = document.getElementById('projectSelect');
     select.innerHTML = '';
@@ -167,7 +175,7 @@ function saveNewProjectModal() {
     const desc = document.getElementById('newProjectDesc').value.trim();
 
     if (!key || !name) {
-        alert('Por favor preencha a Chave e o Nome do Projeto.');
+        alert('Preencha a Chave e o Nome do Projeto.');
         return;
     }
 
@@ -176,7 +184,7 @@ function saveNewProjectModal() {
         return;
     }
 
-    const newProject = {
+    workspace.projects.push({
         key: key,
         name: name,
         description: desc,
@@ -187,9 +195,8 @@ function saveNewProjectModal() {
             { id: "done", title: "Done" }
         ],
         issues: []
-    };
+    });
 
-    workspace.projects.push(newProject);
     workspace.activeProjectId = key;
     saveWorkspace();
 
@@ -210,7 +217,7 @@ function deleteCurrentProject() {
         return;
     }
 
-    if (confirm(`Tem a certeza que deseja eliminar o projeto "${project.name}" (${project.key}) e todas as suas tarefas?`)) {
+    if (confirm(`Eliminar o projeto "${project.name}" (${project.key}) e todas as suas tarefas?`)) {
         workspace.projects = workspace.projects.filter(p => p.key !== project.key);
         workspace.activeProjectId = workspace.projects[0].key;
         saveWorkspace();
@@ -221,16 +228,16 @@ function deleteCurrentProject() {
     }
 }
 
-// Column Management
+// Columns CRUD
 function openAddColumnModal() {
-    const title = prompt('Introduza o nome da nova coluna:');
+    const title = prompt('Nome da nova coluna:');
     if (!title || !title.trim()) return;
 
     const project = getActiveProject();
     const colId = title.trim().toLowerCase().replace(/[^a-z0-9]/g, '-');
 
     if (project.columns.some(c => c.id === colId)) {
-        alert('Já existe uma coluna com um nome semelhante!');
+        alert('Já existe uma coluna semelhante!');
         return;
     }
 
@@ -247,40 +254,31 @@ function deleteColumn(colId) {
     }
 
     const col = project.columns.find(c => c.id === colId);
-    if (confirm(`Eliminar coluna "${col.title}"? Quaisquer tarefas nesta coluna serão movidas para a primeira coluna.`)) {
+    if (confirm(`Eliminar coluna "${col.title}"? Tarefas existentes serão movidas para a primeira coluna.`)) {
         project.columns = project.columns.filter(c => c.id !== colId);
-        const fallbackColId = project.columns[0].id;
-
-        project.issues.forEach(i => {
-            if (i.status === colId) i.status = fallbackColId;
-        });
+        const fallbackId = project.columns[0].id;
+        project.issues.forEach(i => { if (i.status === colId) i.status = fallbackId; });
 
         saveWorkspace();
         renderBoard();
     }
 }
 
-// Filter Options Update
+// Filters Populator
 function updateFilterDropdowns() {
     const project = getActiveProject();
     const epicSelect = document.getElementById('filterEpic');
     const currentEpic = epicSelect.value;
     const uniqueEpics = [...new Set(project.issues.map(i => i.epic))].sort();
 
-    let epicHTML = '<option value="Todos">Todos os Épicos</option>';
-    uniqueEpics.forEach(epic => {
-        epicHTML += `<option value="${epic}">${epic}</option>`;
-    });
+    let epicHTML = '<option value="Todos">Todos</option>';
+    uniqueEpics.forEach(epic => epicHTML += `<option value="${epic}">${epic}</option>`);
 
     epicSelect.innerHTML = epicHTML;
-    if (currentEpic === "Todos" || uniqueEpics.includes(currentEpic)) {
-        epicSelect.value = currentEpic;
-    } else {
-        epicSelect.value = "Todos";
-    }
+    epicSelect.value = (currentEpic === "Todos" || uniqueEpics.includes(currentEpic)) ? currentEpic : "Todos";
 }
 
-// Render Board & Columns dynamically
+// Render Board
 function renderBoard() {
     const project = getActiveProject();
     const boardWrapper = document.getElementById('boardWrapper');
@@ -307,16 +305,14 @@ function renderBoard() {
                     <span>${escapeHTML(col.title)}</span>
                     <span class="issue-count" id="count-${col.id}">0</span>
                 </div>
-                <div class="column-actions">
-                    <button class="icon-btn" onclick="deleteColumn('${col.id}')" title="Eliminar Coluna">🗑️</button>
-                </div>
+                <button class="icon-btn" onclick="deleteColumn('${col.id}')" title="Eliminar Coluna">🗑️</button>
             </div>
             <div class="tickets-container" id="container-${col.id}"></div>
         `;
         boardWrapper.appendChild(colElem);
     });
 
-    // Button to add new column
+    // Add Column Button
     const addColBtn = document.createElement('button');
     addColBtn.className = 'add-column-btn';
     addColBtn.onclick = openAddColumnModal;
@@ -326,7 +322,7 @@ function renderBoard() {
     let counts = {};
     project.columns.forEach(c => counts[c.id] = 0);
 
-    // Filter and Populate Issues
+    // Filter Issues
     project.issues.forEach(issue => {
         if (filterEpic !== "Todos" && issue.epic !== filterEpic) return;
         if (filterPriority !== "Todos" && issue.priority !== filterPriority) return;
@@ -353,7 +349,6 @@ function renderBoard() {
         const typeIcon = ISSUE_TYPE_ICONS[issue.type] || '📑';
         const priorityEmoji = { 'Alta': '🔴', 'Média': '🟡', 'Baixa': '🟢' }[issue.priority] || '🟡';
         
-        // Subtask progress calculation
         const subtasks = issue.subtasks || [];
         const completedSubtasks = subtasks.filter(s => s.completed).length;
         const totalSubtasks = subtasks.length;
@@ -385,7 +380,7 @@ function renderBoard() {
             <div class="ticket-footer">
                 <span class="badge ticket-epic">${escapeHTML(issue.epic)}</span>
                 <span class="badge priority-${issue.priority}">${priorityEmoji} ${issue.priority}</span>
-                ${issue.storyPoints ? `<span class="story-points-badge" title="Pontos de História">${issue.storyPoints} pt</span>` : ''}
+                ${issue.storyPoints ? `<span class="story-points-badge">${issue.storyPoints} pt</span>` : ''}
                 ${issue.assignee ? `<span class="assignee-avatar" title="Atribuído a: ${escapeHTML(issue.assignee)}">${escapeHTML(issue.assignee.substring(0,2).toUpperCase())}</span>` : ''}
             </div>
         `;
@@ -403,7 +398,6 @@ function renderBoard() {
     });
 }
 
-// Generate Next Ticket ID for Active Project
 function generateNextId() {
     const project = getActiveProject();
     if (project.issues.length === 0) return `${project.key}-1`;
@@ -411,76 +405,137 @@ function generateNextId() {
     return `${project.key}-${maxId + 1}`;
 }
 
-// Add New Ticket
-function addTicket() {
-    const titleInput = document.getElementById('newTitle');
-    const typeSelect = document.getElementById('newType');
-    const epicSelect = document.getElementById('newEpic');
-    const prioritySelect = document.getElementById('newPriority');
-    const pointsSelect = document.getElementById('newStoryPoints');
+// Unified Task Modal Handlers
+function openCreateModal() {
+    currentEditingId = null;
+    document.getElementById('taskModalTitle').innerText = 'Criar Nova Tarefa';
+    document.getElementById('taskTitle').value = '';
+    document.getElementById('taskDescription').value = '';
+    document.getElementById('taskType').value = 'Task';
+    document.getElementById('taskEpic').value = 'Epic 1: Geoespacial';
+    document.getElementById('taskPriority').value = 'Média';
+    document.getElementById('taskStoryPoints').value = '3';
+    document.getElementById('taskAssignee').value = 'Marcelo';
+    document.getElementById('deleteTaskModalBtn').style.display = 'none';
 
-    const title = titleInput.value.trim();
-    if (!title) {
-        titleInput.focus();
-        return;
-    }
-
-    const project = getActiveProject();
-    const newIssue = {
-        id: generateNextId(),
-        title: title,
-        description: '',
-        type: typeSelect.value,
-        epic: epicSelect.value,
-        priority: prioritySelect.value,
-        storyPoints: parseInt(pointsSelect.value) || 1,
-        assignee: 'Marcelo',
-        status: project.columns[0].id,
-        subtasks: []
-    };
-
-    project.issues.push(newIssue);
-    saveWorkspace();
-    updateFilterDropdowns();
-    renderBoard();
-    titleInput.value = '';
+    populateTaskStatusDropdown();
+    renderModalSubtasks([]);
+    document.getElementById('taskModalOverlay').classList.add('active');
 }
 
-// Modal Edit & Subtask Handlers
 function openEditModal(id) {
     const project = getActiveProject();
     const issue = project.issues.find(i => i.id === id);
     if (!issue) return;
 
     currentEditingId = id;
-    document.getElementById('modalId').innerText = issue.id;
-    document.getElementById('editTitle').value = issue.title;
-    document.getElementById('editDescription').value = issue.description || '';
-    document.getElementById('editType').value = issue.type || 'Task';
-    document.getElementById('editEpic').value = issue.epic || 'Outro';
-    document.getElementById('editPriority').value = issue.priority || 'Média';
-    document.getElementById('editStoryPoints').value = issue.storyPoints || 1;
-    document.getElementById('editAssignee').value = issue.assignee || '';
-    
-    // Status Select Options populated dynamically based on current project's columns
-    const statusSelect = document.getElementById('editStatus');
+    document.getElementById('taskModalTitle').innerText = `Editar Tarefa (${issue.id})`;
+    document.getElementById('taskTitle').value = issue.title;
+    document.getElementById('taskDescription').value = issue.description || '';
+    document.getElementById('taskType').value = issue.type || 'Task';
+    document.getElementById('taskEpic').value = issue.epic || 'Outro';
+    document.getElementById('taskPriority').value = issue.priority || 'Média';
+    document.getElementById('taskStoryPoints').value = issue.storyPoints || 1;
+    document.getElementById('taskAssignee').value = issue.assignee || '';
+    document.getElementById('deleteTaskModalBtn').style.display = 'block';
+
+    populateTaskStatusDropdown(issue.status);
+    renderModalSubtasks(issue.subtasks || []);
+    document.getElementById('taskModalOverlay').classList.add('active');
+}
+
+function populateTaskStatusDropdown(selectedStatus) {
+    const project = getActiveProject();
+    const statusSelect = document.getElementById('taskStatus');
     statusSelect.innerHTML = '';
     project.columns.forEach(col => {
         const option = document.createElement('option');
         option.value = col.id;
         option.textContent = col.title;
-        if (col.id === issue.status) option.selected = true;
+        if (col.id === (selectedStatus || project.columns[0].id)) option.selected = true;
         statusSelect.appendChild(option);
     });
-
-    renderModalSubtasks(issue.subtasks || []);
-    document.getElementById('editModalOverlay').classList.add('active');
 }
 
+function saveTaskModal() {
+    const title = document.getElementById('taskTitle').value.trim();
+    if (!title) {
+        document.getElementById('taskTitle').focus();
+        return;
+    }
+
+    const project = getActiveProject();
+    const type = document.getElementById('taskType').value;
+    const desc = document.getElementById('taskDescription').value.trim();
+    const epic = document.getElementById('taskEpic').value;
+    const priority = document.getElementById('taskPriority').value;
+    const points = parseInt(document.getElementById('taskStoryPoints').value) || 1;
+    const assignee = document.getElementById('taskAssignee').value.trim();
+    const status = document.getElementById('taskStatus').value;
+
+    if (currentEditingId) {
+        // Edit existing issue
+        const issue = project.issues.find(i => i.id === currentEditingId);
+        if (issue) {
+            issue.title = title;
+            issue.description = desc;
+            issue.type = type;
+            issue.epic = epic;
+            issue.priority = priority;
+            issue.storyPoints = points;
+            issue.assignee = assignee;
+            issue.status = status;
+        }
+    } else {
+        // Create new issue
+        const newIssue = {
+            id: generateNextId(),
+            title: title,
+            description: desc,
+            type: type,
+            epic: epic,
+            priority: priority,
+            storyPoints: points,
+            assignee: assignee,
+            status: status,
+            subtasks: currentModalSubtasks
+        };
+        project.issues.push(newIssue);
+    }
+
+    saveWorkspace();
+    updateFilterDropdowns();
+    renderBoard();
+    closeTaskModal();
+}
+
+function closeTaskModal() {
+    document.getElementById('taskModalOverlay').classList.remove('active');
+    currentEditingId = null;
+}
+
+function deleteCurrentTask() {
+    if (currentEditingId) {
+        deleteTicket(currentEditingId);
+        closeTaskModal();
+    }
+}
+
+// Modal Subtask Checklist
+let currentModalSubtasks = [];
+
 function renderModalSubtasks(subtasks) {
+    if (currentEditingId) {
+        const project = getActiveProject();
+        const issue = project.issues.find(i => i.id === currentEditingId);
+        if (issue) currentModalSubtasks = issue.subtasks || [];
+    } else {
+        currentModalSubtasks = subtasks || [];
+    }
+
     const container = document.getElementById('modalSubtasksList');
     container.innerHTML = '';
-    subtasks.forEach((st, idx) => {
+    currentModalSubtasks.forEach((st, idx) => {
         const div = document.createElement('div');
         div.className = `subtask-item ${st.completed ? 'completed' : ''}`;
         div.innerHTML = `
@@ -495,75 +550,36 @@ function renderModalSubtasks(subtasks) {
 function addSubtaskFromModal() {
     const input = document.getElementById('newSubtaskInput');
     const text = input.value.trim();
-    if (!text || !currentEditingId) return;
+    if (!text) return;
 
-    const project = getActiveProject();
-    const issue = project.issues.find(i => i.id === currentEditingId);
-    if (issue) {
-        if (!issue.subtasks) issue.subtasks = [];
-        issue.subtasks.push({ id: Date.now(), text: text, completed: false });
-        renderModalSubtasks(issue.subtasks);
-        input.value = '';
-    }
+    currentModalSubtasks.push({ id: Date.now(), text: text, completed: false });
+    renderModalSubtasks(currentModalSubtasks);
+    input.value = '';
 }
 
 function toggleSubtask(idx) {
-    const project = getActiveProject();
-    const issue = project.issues.find(i => i.id === currentEditingId);
-    if (issue && issue.subtasks[idx]) {
-        issue.subtasks[idx].completed = !issue.subtasks[idx].completed;
-        renderModalSubtasks(issue.subtasks);
+    if (currentModalSubtasks[idx]) {
+        currentModalSubtasks[idx].completed = !currentModalSubtasks[idx].completed;
+        renderModalSubtasks(currentModalSubtasks);
     }
 }
 
 function removeSubtask(idx) {
-    const project = getActiveProject();
-    const issue = project.issues.find(i => i.id === currentEditingId);
-    if (issue && issue.subtasks) {
-        issue.subtasks.splice(idx, 1);
-        renderModalSubtasks(issue.subtasks);
-    }
-}
-
-function saveEditModal() {
-    if (!currentEditingId) return;
-
-    const project = getActiveProject();
-    const issue = project.issues.find(i => i.id === currentEditingId);
-    if (issue) {
-        issue.title = document.getElementById('editTitle').value.trim();
-        issue.description = document.getElementById('editDescription').value.trim();
-        issue.type = document.getElementById('editType').value;
-        issue.epic = document.getElementById('editEpic').value;
-        issue.priority = document.getElementById('editPriority').value;
-        issue.storyPoints = parseInt(document.getElementById('editStoryPoints').value) || 1;
-        issue.assignee = document.getElementById('editAssignee').value.trim();
-        issue.status = document.getElementById('editStatus').value;
-
-        saveWorkspace();
-        updateFilterDropdowns();
-        renderBoard();
-    }
-    closeModal();
-}
-
-function closeModal() {
-    document.getElementById('editModalOverlay').classList.remove('active');
-    currentEditingId = null;
+    currentModalSubtasks.splice(idx, 1);
+    renderModalSubtasks(currentModalSubtasks);
 }
 
 function deleteTicket(id) {
     const project = getActiveProject();
-    if (confirm(`Tem a certeza que deseja eliminar a tarefa ${id}?`)) {
+    if (confirm(`Eliminar a tarefa ${id}?`)) {
         project.issues = project.issues.filter(i => i.id !== id);
         saveWorkspace();
         updateFilterDropdowns();
         renderBoard();
-        if (currentEditingId === id) closeModal();
     }
 }
 
-// Drag and Drop Logic
+// Drag & Drop
 function dragStart(ev) {
     draggedTicketId = ev.target.id;
     ev.dataTransfer.setData("text/plain", ev.target.id);
@@ -610,7 +626,7 @@ function drop(ev) {
     }
 }
 
-// Export / Import CSV for active project
+// CSV Export / Import
 function exportCSV() {
     const project = getActiveProject();
     let csvContent = "data:text/csv;charset=utf-8,ID,Tipo,Titulo,Descricao,Epico,Prioridade,Pontos,Atribuido,Status\n";
@@ -674,7 +690,7 @@ function importCSV(event) {
 
 function clearBoard() {
     const project = getActiveProject();
-    if (confirm(`Tem a certeza que deseja apagar TODAS as tarefas do projeto ${project.name}?`)) {
+    if (confirm(`Apagar TODAS as tarefas do projeto ${project.name}?`)) {
         project.issues = [];
         saveWorkspace();
         updateFilterDropdowns();

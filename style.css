@@ -27,7 +27,7 @@
 
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
     --radius: 10px;
 }
 
@@ -89,6 +89,7 @@ body {
     justify-content: space-between;
     align-items: center;
     box-shadow: var(--shadow-sm);
+    z-index: 10;
 }
 
 .brand-section {
@@ -109,9 +110,9 @@ body {
 .project-selector-wrapper {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     background: var(--bg-page);
-    padding: 4px 10px;
+    padding: 4px 8px;
     border-radius: 8px;
     border: 1px solid var(--border);
 }
@@ -120,56 +121,119 @@ body {
     border: none;
     background: transparent;
     font-weight: 700;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--primary);
     cursor: pointer;
     padding: 4px 0;
+    outline: none;
 }
 
-/* Main Content Area */
-.main-container {
-    padding: 24px;
-    flex: 1;
+.header-actions {
     display: flex;
-    flex-direction: column;
-    gap: 20px;
+    align-items: center;
+    gap: 10px;
 }
 
-/* Controls Panel */
-.header-panel {
+/* Dropdown Menu */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
     background: var(--bg-card);
-    padding: 18px 20px;
-    border-radius: var(--radius);
     border: 1px solid var(--border);
-    box-shadow: var(--shadow-sm);
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    min-width: 180px;
+    padding: 6px 0;
+    display: none;
+    z-index: 100;
 }
 
-.controls-row {
+.dropdown-menu.show {
+    display: flex;
+    flex-direction: column;
+}
+
+.dropdown-item {
+    padding: 8px 16px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 500;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dropdown-item:hover {
+    background: var(--bg-page);
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+}
+
+.text-danger {
+    color: #ef4444 !important;
+}
+
+/* Filter Toolbar */
+.filter-toolbar {
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 24px;
+    display: none;
+    box-shadow: var(--shadow-sm);
+}
+
+.filter-toolbar.show {
+    display: block;
+}
+
+.filter-row {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
     align-items: center;
 }
 
+.search-input {
+    flex: 1;
+    min-width: 200px;
+    max-width: 320px;
+}
+
 .filter-group {
     display: flex;
     align-items: center;
-    gap: 8px;
-    background: var(--bg-page);
-    padding: 6px 12px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
+    gap: 6px;
     font-size: 13px;
+    color: var(--text-muted);
     font-weight: 500;
 }
 
+.filter-group select {
+    padding: 6px 10px;
+    font-size: 13px;
+}
+
+/* Base Form Inputs & Buttons */
 input[type="text"],
 select,
 textarea {
-    padding: 9px 13px;
+    padding: 8px 12px;
     border: 1px solid var(--border);
     border-radius: 8px;
     font-size: 14px;
@@ -230,24 +294,45 @@ button,
     background-color: #fecaca;
 }
 
-[data-theme="dark"] .btn-danger {
-    background-color: #7f1d1d;
-    color: #fca5a5;
-    border-color: #991b1b;
+.btn-icon {
+    padding: 4px 8px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.btn-text {
+    background: transparent;
+    border: none;
+    color: var(--primary);
+    padding: 4px 8px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.btn-text:hover {
+    text-decoration: underline;
 }
 
 .theme-toggle-btn {
     background: var(--bg-page);
     border: 1px solid var(--border);
     color: var(--text-main);
-    padding: 6px 12px;
+    padding: 6px 10px;
     border-radius: 8px;
     cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 14px;
 }
 
-/* Kanban Board Horizon */
+/* Main Board Layout */
+.main-container {
+    padding: 24px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
 .board-wrapper {
     display: flex;
     gap: 16px;
@@ -263,7 +348,7 @@ button,
     padding: 16px;
     min-width: 320px;
     width: 320px;
-    min-height: 520px;
+    min-height: 540px;
     display: flex;
     flex-direction: column;
     border: 2px dashed transparent;
@@ -293,11 +378,6 @@ button,
     gap: 8px;
 }
 
-.column-actions {
-    display: flex;
-    gap: 4px;
-}
-
 .issue-count {
     background: var(--bg-card);
     padding: 2px 10px;
@@ -312,12 +392,12 @@ button,
     flex-direction: column;
     gap: 12px;
     flex: 1;
-    min-height: 100px;
+    min-height: 120px;
 }
 
 .add-column-btn {
     min-width: 220px;
-    height: 100px;
+    height: 90px;
     border: 2px dashed var(--border);
     border-radius: var(--radius);
     background: transparent;
@@ -401,7 +481,6 @@ button,
     overflow: hidden;
 }
 
-/* Subtasks Progress Bar */
 .subtasks-progress {
     display: flex;
     align-items: center;
@@ -514,7 +593,7 @@ button,
     color: var(--text-main);
 }
 
-/* Modal Overlay & Dialog */
+/* Modals */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -540,7 +619,7 @@ button,
 .modal {
     background: var(--bg-card);
     width: 90%;
-    max-width: 580px;
+    max-width: 560px;
     max-height: 90vh;
     overflow-y: auto;
     border-radius: var(--radius);
@@ -583,7 +662,6 @@ button,
     color: var(--text-muted);
 }
 
-/* Subtasks List in Modal */
 .subtasks-list {
     display: flex;
     flex-direction: column;
