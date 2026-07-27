@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jira - App Trilhos Portugal</title>
+    <style>
+        /* Paleta de Cores Moderna (Estilo Tailwind/Linear) */
+        :root {
+            --bg-page: #f9fafb;
+            --bg-board: #f3f4f6;
+            --card: #ffffff;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --border: #e5e7eb;
+            --epic-bg: #e0e7ff;
+            --epic-text: #4338ca;
+            --drop-zone-bg: #eff6ff;
+            --drop-zone-border: #93c5fd;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            margin: 0;
+            padding: 30px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1 {
+            margin-top: 0;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: -0.5px;
+        }
+
+        /* Controlos Modernos */
+        .header-panel {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            margin-bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .controls-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            background: #f8fafc;
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        input[type="text"],
+        select {
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input[type="text"]:focus,
+        select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        button,
+        .file-upload-label {
+            padding: 10px 16px;
+            font-size: 14px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background-color: white;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background-color: #f9fafb;
+            border-color: #d1d5db;
+        }
+
+        .btn-danger {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
+
+        .btn-danger:hover {
+            background-color: #fecaca;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        /* Quadro Kanban */
+        .board {
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+            overflow-x: auto;
+            padding-bottom: 20px;
+        }
+
+        .column {
+            background-color: var(--bg-board);
+            border-radius: 12px;
+            width: 340px;
+            min-height: 500px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            border: 2px solid transparent;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+
+        /* Efeito de Zona de Aterragem (Drop Zone) */
+        .column.drag-over {
+            background-color: var(--drop-zone-bg);
+            border: 2px dashed var(--drop-zone-border);
+        }
+
+        .column h3 {
+            font-size: 13px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-top: 0;
+            margin-bottom: 16px;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 0.5px;
+        }
+
+        .issue-count {
+            background: #e5e7eb;
+            padding: 2px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            color: var(--text-main);
+        }
+
+        /* Tickets */
+        .ticket {
+            background-color: var(--card);
+            padding: 16px;
+            margin-bottom: 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            cursor: grab;
+            transition: box-shadow 0.2s, transform 0.1s;
+        }
+
+        .ticket:hover {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Efeito visual enquanto o ticket está a ser arrastado */
+        .ticket.dragging {
+            opacity: 0.4;
+            cursor: grabbing;
+            transform: scale(0.98);
+        }
+
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .ticket-id {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .ticket-title {
+            font-size: 14px;
+            margin: 0 0 12px 0;
+            line-height: 1.5;
+            font-weight: 500;
+        }
+
+        .ticket-epic {
+            font-size: 11px;
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: var(--epic-bg);
+            color: var(--epic-text);
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>App Trilhos Portugal</h1>
+
+    <div class="header-panel">
+        <div class="controls-row">
+            <div class="filter-group">
+                <span style="font-size: 14px; margin-right: 10px; color: var(--text-muted);">👁️ Visualizar:</span>
+                <select id="filterEpic" onchange="renderBoard()"
+                    style="border: none; background: transparent; font-weight: 600; padding: 0;">
+                    <option value="Todos">Todos os Épicos</option>
+                </select>
+            </div>
+
+            <div style="flex: 1;"></div>
+
+            <label class="btn-secondary file-upload-label">
+                📂 Importar CSV
+                <input type="file" id="csvFileInput" accept=".csv" onchange="importCSV(event)">
+            </label>
+            <button class="btn-danger" onclick="clearBoard()">Apagar Tudo</button>
+        </div>
+
+        <div style="height: 1px; background: var(--border); width: 100%;"></div>
+
+        <div class="controls-row">
+            <input type="text" id="newTitle" placeholder="O que precisa de ser feito?" required
+                style="flex: 1; min-width: 300px;">
+            <select id="newEpic">
+                <option value="Epic 1: Geoespacial">Epic 1: Geoespacial</option>
+                <option value="Epic 2: Backend">Epic 2: Backend</option>
+                <option value="Epic 3: Hardware/Navegação">Epic 3: Hardware/Navegação</option>
+                <option value="Outro">Outro</option>
+            </select>
+            <button class="btn-primary" onclick="addTicket()">+ Adicionar Tarefa</button>
+        </div>
+    </div>
+
+    <!-- Quadro Kanban -->
+    <div class="board">
+        <div class="column" id="todo" ondragenter="dragEnter(event)" ondragover="dragOver(event)"
+            ondragleave="dragLeave(event)" ondrop="drop(event)">
+            <h3>To Do <span class="issue-count" id="count-todo">0</span></h3>
+        </div>
+        <div class="column" id="in-progress" ondragenter="dragEnter(event)" ondragover="dragOver(event)"
+            ondragleave="dragLeave(event)" ondrop="drop(event)">
+            <h3>In Progress <span class="issue-count" id="count-in-progress">0</span></h3>
+        </div>
+        <div class="column" id="done" ondragenter="dragEnter(event)" ondragover="dragOver(event)"
+            ondragleave="dragLeave(event)" ondrop="drop(event)">
+            <h3>Done <span class="issue-count" id="count-done">0</span></h3>
+        </div>
+    </div>
+
+    <script>
+        let issues = JSON.parse(localStorage.getItem('trilhosIssues')) || [];
+        let draggedTicket = null; // Guarda a referência do ticket a ser arrastado
+
+        function updateFilterDropdown() {
+            const filterSelect = document.getElementById('filterEpic');
+            const currentValue = filterSelect.value;
+
+            const uniqueEpics = [...new Set(issues.map(i => i.epic))].sort();
+
+            let optionsHTML = '<option value="Todos">Todos os Épicos</option>';
+            uniqueEpics.forEach(epic => {
+                optionsHTML += `<option value="${epic}">${epic}</option>`;
+            });
+
+            filterSelect.innerHTML = optionsHTML;
+
+            if (currentValue === "Todos" || uniqueEpics.includes(currentValue)) {
+                filterSelect.value = currentValue;
+            } else {
+                filterSelect.value = "Todos";
+            }
+        }
+
+        function renderBoard() {
+            // Limpa as colunas mantendo o título
+            document.getElementById('todo').innerHTML = '<h3>To Do <span class="issue-count" id="count-todo">0</span></h3>';
+            document.getElementById('in-progress').innerHTML = '<h3>In Progress <span class="issue-count" id="count-in-progress">0</span></h3>';
+            document.getElementById('done').innerHTML = '<h3>Done <span class="issue-count" id="count-done">0</span></h3>';
+
+            const filterValue = document.getElementById('filterEpic').value;
+            let counts = { 'todo': 0, 'in-progress': 0, 'done': 0 };
+
+            issues.forEach(issue => {
+                if (filterValue !== "Todos" && issue.epic !== filterValue) return;
+
+                const card = document.createElement('div');
+                card.className = 'ticket';
+                card.draggable = true;
+                card.id = issue.id;
+
+                // Eventos de Drag & Drop no Ticket
+                card.ondragstart = dragStart;
+                card.ondragend = dragEnd;
+
+                card.innerHTML = `
+                    <div class="ticket-header">
+                        <div class="ticket-id">${issue.id}</div>
+                    </div>
+                    <div class="ticket-title">${issue.title}</div>
+                    <div class="ticket-epic">${issue.epic}</div>
+                `;
+
+                const targetCol = document.getElementById(issue.status) || document.getElementById('todo');
+                targetCol.appendChild(card);
+
+                if (counts[issue.status] !== undefined) counts[issue.status]++;
+            });
+
+            document.getElementById('count-todo').innerText = counts['todo'];
+            document.getElementById('count-in-progress').innerText = counts['in-progress'];
+            document.getElementById('count-done').innerText = counts['done'];
+        }
+
+        function generateNextId() {
+            if (issues.length === 0) return "TRL-1";
+            const maxId = Math.max(...issues.map(i => parseInt(i.id.replace(/\D/g, '')) || 0));
+            return "TRL-" + (maxId + 1);
+        }
+
+        function addTicket() {
+            const title = document.getElementById('newTitle').value;
+            const epic = document.getElementById('newEpic').value;
+            if (!title) return;
+
+            issues.push({ id: generateNextId(), title, epic, status: "todo" });
+            saveAndRender();
+            document.getElementById('newTitle').value = '';
+        }
+
+        // --- LÓGICA MELHORADA DE DRAG AND DROP ---
+
+        function dragStart(ev) {
+            draggedTicket = ev.target;
+            ev.dataTransfer.setData("text", ev.target.id);
+            ev.dataTransfer.effectAllowed = "move";
+
+            // Adiciona a classe visual com um micro-atraso para o navegador conseguir
+            // capturar a imagem original do ticket para o "ghost" que segue o rato
+            setTimeout(() => {
+                ev.target.classList.add('dragging');
+            }, 0);
+        }
+
+        function dragEnd(ev) {
+            ev.target.classList.remove('dragging');
+            draggedTicket = null;
+
+            // Limpa o estilo de "drop zone" de todas as colunas caso o drag seja cancelado
+            document.querySelectorAll('.column').forEach(col => col.classList.remove('drag-over'));
+        }
+
+        function dragEnter(ev) {
+            ev.preventDefault();
+            const column = ev.target.closest('.column');
+            if (column) column.classList.add('drag-over');
+        }
+
+        function dragOver(ev) {
+            ev.preventDefault(); // Necessário para permitir o drop
+            ev.dataTransfer.dropEffect = "move";
+        }
+
+        function dragLeave(ev) {
+            const column = ev.target.closest('.column');
+            // Só remove a classe se estivermos a sair da coluna (e não a entrar num elemento filho dela)
+            if (column && !column.contains(ev.relatedTarget)) {
+                column.classList.remove('drag-over');
+            }
+        }
+
+        function drop(ev) {
+            ev.preventDefault();
+            const ticketId = ev.dataTransfer.getData("text");
+            const targetCol = ev.target.closest('.column');
+
+            if (targetCol) {
+                targetCol.classList.remove('drag-over'); // Remove o brilho da coluna
+
+                const issueIndex = issues.findIndex(i => i.id === ticketId);
+                if (issueIndex > -1 && issues[issueIndex].status !== targetCol.id) {
+                    issues[issueIndex].status = targetCol.id;
+                    saveAndRender();
+                }
+            }
+        }
+
+        // --- FIM DA LÓGICA DE DRAG AND DROP ---
+
+        function importCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const text = e.target.result;
+                const lines = text.split(/\r?\n/);
+
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+
+                    const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
+                    if (cols.length < 2) continue;
+
+                    const id = cols[0] || generateNextId();
+                    const title = cols[1] || "Sem Título";
+                    const epic = cols[2] || "Outro";
+                    let status = (cols[3] || "todo").toLowerCase();
+                    if (!["todo", "in-progress", "done"].includes(status)) status = "todo";
+
+                    const existingIndex = issues.findIndex(iss => iss.id === id);
+                    if (existingIndex > -1) {
+                        issues[existingIndex] = { id, title, epic, status };
+                    } else {
+                        issues.push({ id, title, epic, status });
+                    }
+                }
+                saveAndRender();
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        function saveAndRender() {
+            localStorage.setItem('trilhosIssues', JSON.stringify(issues));
+            updateFilterDropdown();
+            renderBoard();
+        }
+
+        function clearBoard() {
+            if (confirm('Tens a certeza que queres apagar todos os tickets atuais?')) {
+                issues = [];
+                saveAndRender();
+            }
+        }
+
+        // Init
+        updateFilterDropdown();
+        renderBoard();
+    </script>
+</body>
+
+</html>
