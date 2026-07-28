@@ -63,6 +63,11 @@ function migrateWorkspaceData() {
         if (!project.sprints) project.sprints = [];
         if (!project.epics) project.epics = [];
         if (!project.issues) project.issues = [];
+
+        project.issues.forEach(issue => {
+            if (!issue.subtasks) issue.subtasks = [];
+            if (!issue.comments) issue.comments = [];
+        });
     });
     saveWorkspace();
 }

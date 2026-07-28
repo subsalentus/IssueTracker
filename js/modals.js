@@ -7,7 +7,7 @@ function openCreateModalWithStatus(status) {
     }
 }
 
-// Unified Task Modal Handlers
+// Unified Task Modal & Side Drawer Handlers
 function openCreateModal() {
     const project = getActiveProject();
     currentEditingId = null;
@@ -20,10 +20,14 @@ function openCreateModal() {
     document.getElementById('taskAssignee').value = 'Marcelo';
     document.getElementById('deleteTaskModalBtn').style.display = 'none';
 
+    const iconElem = document.getElementById('taskDrawerIcon');
+    if (iconElem) iconElem.innerText = '📑';
+
     populateTaskEpicDropdown(project.epics?.[0] || '');
     populateTaskStatusDropdown();
     populateTaskSprintDropdown();
     renderModalSubtasks([]);
+    renderTaskComments([]);
     document.getElementById('taskModalOverlay').classList.add('active');
 }
 
@@ -42,10 +46,15 @@ function openEditModal(id) {
     document.getElementById('taskAssignee').value = issue.assignee || '';
     document.getElementById('deleteTaskModalBtn').style.display = 'block';
 
+    const typeIcons = { 'Task': '📑', 'Bug': '🐛', 'Story': '📖', 'Epic': '⚡', 'Feature': '🌟' };
+    const iconElem = document.getElementById('taskDrawerIcon');
+    if (iconElem) iconElem.innerText = typeIcons[issue.type] || '📑';
+
     populateTaskEpicDropdown(issue.epic || project.epics?.[0]);
     populateTaskStatusDropdown(issue.status);
     populateTaskSprintDropdown(issue.sprintId);
     renderModalSubtasks(issue.subtasks || []);
+    renderTaskComments(issue.comments || []);
     document.getElementById('taskModalOverlay').classList.add('active');
 }
 
@@ -132,6 +141,83 @@ function deleteModalSubtask(subId) {
     renderModalSubtasks(currentModalSubtasks);
 }
 
+// Drawer Task Comments System
+let currentDrawerComments = [];
+
+function renderTaskComments(comments) {
+    currentDrawerComments = JSON.parse(JSON.stringify(comments || []));
+    const container = document.getElementById('drawerCommentsList');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (currentDrawerComments.length === 0) {
+        container.innerHTML = `<p style="color:var(--text-muted); font-size:12px; font-style:italic; margin:4px 0;">${t('no_comments_yet')}</p>`;
+        return;
+    }
+
+    currentDrawerComments.forEach(comment => {
+        const item = document.createElement('div');
+        item.className = 'comment-item';
+        item.innerHTML = `
+            <div class="comment-meta">
+                <span class="comment-author">👤 ${escapeHTML(comment.author || 'User')}</span>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <span>🕒 ${escapeHTML(comment.timestamp || '')}</span>
+                    <button class="icon-btn" onclick="deleteTaskComment(${comment.id})" title="Eliminar comentário">🗑️</button>
+                </div>
+            </div>
+            <p class="comment-text">${escapeHTML(comment.text)}</p>
+        `;
+        container.appendChild(item);
+    });
+}
+
+function addCommentFromDrawer() {
+    const input = document.getElementById('newCommentInput');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+
+    const assigneeInput = document.getElementById('taskAssignee');
+    const author = (assigneeInput && assigneeInput.value.trim()) ? assigneeInput.value.trim() : 'User';
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' - ' + new Date().toLocaleDateString();
+
+    const newComment = {
+        id: Date.now(),
+        author: author,
+        text: text,
+        timestamp: timestamp
+    };
+
+    currentDrawerComments.push(newComment);
+    input.value = '';
+    renderTaskComments(currentDrawerComments);
+
+    // Save immediately if editing existing task
+    if (currentEditingId) {
+        const project = getActiveProject();
+        const issue = project.issues.find(i => i.id === currentEditingId);
+        if (issue) {
+            issue.comments = currentDrawerComments;
+            saveWorkspace();
+        }
+    }
+}
+
+function deleteTaskComment(commentId) {
+    currentDrawerComments = currentDrawerComments.filter(c => c.id !== commentId);
+    renderTaskComments(currentDrawerComments);
+
+    if (currentEditingId) {
+        const project = getActiveProject();
+        const issue = project.issues.find(i => i.id === currentEditingId);
+        if (issue) {
+            issue.comments = currentDrawerComments;
+            saveWorkspace();
+        }
+    }
+}
+
 function saveTaskModal() {
     const project = getActiveProject();
     const title = document.getElementById('taskTitle').value.trim();
@@ -163,6 +249,7 @@ function saveTaskModal() {
             issue.status = status;
             issue.sprintId = sprintId;
             issue.subtasks = currentModalSubtasks;
+            issue.comments = currentDrawerComments;
         }
     } else {
         // Create new task
@@ -177,7 +264,8 @@ function saveTaskModal() {
             assignee: assignee,
             status: status,
             sprintId: sprintId,
-            subtasks: currentModalSubtasks
+            subtasks: currentModalSubtasks,
+            comments: currentDrawerComments
         };
         project.issues.push(newIssue);
     }

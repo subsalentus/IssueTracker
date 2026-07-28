@@ -136,17 +136,20 @@
         </main>
     </div>
 
-    <!-- Modal de Criar/Editar Tarefa -->
-    <div class="modal-overlay" id="taskModalOverlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 class="modal-title" id="taskModalTitle">Criar Nova Tarefa</h3>
+    <!-- Painel Lateral Deslizante para Detalhes da Tarefa (Side Drawer) -->
+    <div class="drawer-overlay" id="taskModalOverlay" onclick="if(event.target===this) closeTaskModal()">
+        <div class="task-drawer" id="taskDrawer">
+            <div class="drawer-header">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span id="taskDrawerIcon" style="font-size:22px;">📑</span>
+                    <h3 class="modal-title" id="taskModalTitle" data-i18n="modal_edit_task_title">Detalhes da Tarefa</h3>
+                </div>
                 <button class="icon-btn" onclick="closeTaskModal()">✖️</button>
             </div>
-            <div class="modal-body">
+            <div class="drawer-body">
                 <div style="display: flex; gap: 12px;">
                     <div class="form-group" style="width: 140px;">
-                        <label>Tipo</label>
+                        <label data-i18n="label_type">Tipo</label>
                         <select id="taskType">
                             <option value="Task">Task 📑</option>
                             <option value="Bug">Bug 🐛</option>
@@ -156,42 +159,42 @@
                         </select>
                     </div>
                     <div class="form-group" style="flex: 1;">
-                        <label>Título</label>
+                        <label data-i18n="label_title">Título</label>
                         <input type="text" id="taskTitle" placeholder="Ex: Ajustar layout do menu" required>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>Descrição</label>
+                    <label data-i18n="label_desc">Descrição</label>
                     <textarea id="taskDescription" rows="3" placeholder="Detalhes adicionais da tarefa..."></textarea>
                 </div>
 
                 <!-- Subtarefas Checklist -->
                 <div class="form-group" id="subtasksSection">
-                    <label>Subtarefas</label>
+                    <label data-i18n="label_subtasks">Subtarefas</label>
                     <div class="subtasks-list" id="modalSubtasksList"></div>
                     <div class="add-subtask-row">
-                        <input type="text" id="newSubtaskInput" placeholder="Adicionar nova subtarefa..." style="flex:1;" onkeydown="if(event.key==='Enter') addSubtaskFromModal()">
-                        <button class="btn-secondary" onclick="addSubtaskFromModal()">+ Adicionar</button>
+                        <input type="text" id="newSubtaskInput" data-i18n-ph="subtask_ph" placeholder="Adicionar nova subtarefa..." style="flex:1;" onkeydown="if(event.key==='Enter') addSubtaskFromModal()">
+                        <button class="btn-secondary" onclick="addSubtaskFromModal()" data-i18n="btn_add_subtask">+ Adicionar</button>
                     </div>
                 </div>
 
                 <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                     <div class="form-group" style="flex: 1; min-width: 140px;">
                         <label style="display:flex; justify-content:space-between; align-items:center;">
-                            <span>Épico</span>
-                            <a href="#" onclick="openCreateEpicPrompt(); return false;" style="font-size:11px; color:var(--primary); text-transform:none; font-weight:600; text-decoration:none;">+ Criar Épico</a>
+                            <span data-i18n="label_epic">Épico</span>
+                            <a href="#" onclick="openCreateEpicPrompt(); return false;" style="font-size:11px; color:var(--primary); text-transform:none; font-weight:600; text-decoration:none;" data-i18n="btn_create_epic">+ Criar Épico</a>
                         </label>
                         <select id="taskEpic" onchange="handleTaskEpicChange(this.value)"></select>
                     </div>
 
                     <div class="form-group" style="flex: 1; min-width: 140px;">
-                        <label>Sprint / Release</label>
+                        <label data-i18n="label_sprint">Sprint / Release</label>
                         <select id="taskSprint"></select>
                     </div>
 
                     <div class="form-group" style="flex: 1; min-width: 120px;">
-                        <label>Prioridade</label>
+                        <label data-i18n="label_priority">Prioridade</label>
                         <select id="taskPriority">
                             <option value="Alta">Alta 🔴</option>
                             <option value="Média" selected>Média 🟡</option>
@@ -200,7 +203,7 @@
                     </div>
 
                     <div class="form-group" style="width: 110px;">
-                        <label>Story Points</label>
+                        <label data-i18n="label_story_points">Story Points</label>
                         <select id="taskStoryPoints">
                             <option value="1">1 pt</option>
                             <option value="2">2 pt</option>
@@ -214,20 +217,30 @@
 
                 <div style="display: flex; gap: 12px;">
                     <div class="form-group" style="flex: 1;">
-                        <label>Atribuído a</label>
+                        <label data-i18n="label_assignee">Atribuído a</label>
                         <input type="text" id="taskAssignee" placeholder="Ex: Marcelo, Ana..." value="Marcelo">
                     </div>
                     <div class="form-group" style="flex: 1;">
-                        <label>Coluna (Estado)</label>
+                        <label data-i18n="label_status">Coluna (Estado)</label>
                         <select id="taskStatus"></select>
                     </div>
                 </div>
+
+                <!-- Secção de Comentários / Discussão -->
+                <div class="form-group" id="commentsSection" style="margin-top:16px; border-top:1px solid var(--border); padding-top:16px;">
+                    <label data-i18n="label_comments" style="font-size:14px; font-weight:700;">💬 Comentários</label>
+                    <div class="comments-list" id="drawerCommentsList"></div>
+                    <div class="add-comment-box" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
+                        <textarea id="newCommentInput" rows="2" data-i18n-ph="comment_ph" placeholder="Escreva um comentário..." style="width:100%; resize:vertical;"></textarea>
+                        <button class="btn-primary" style="align-self:flex-end; font-size:12px; padding:6px 14px;" onclick="addCommentFromDrawer()" data-i18n="btn_add_comment">Adicionar Comentário</button>
+                    </div>
+                </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn-danger" id="deleteTaskModalBtn" style="display: none;" onclick="deleteCurrentTask()">🗑️ Eliminar</button>
+            <div class="drawer-footer">
+                <button class="btn-danger" id="deleteTaskModalBtn" style="display: none;" onclick="deleteCurrentTask()" data-i18n="btn_delete">🗑️ Eliminar</button>
                 <div style="display: flex; gap: 8px; margin-left: auto;">
-                    <button class="btn-secondary" onclick="closeTaskModal()">Cancelar</button>
-                    <button class="btn-primary" onclick="saveTaskModal()">Guardar</button>
+                    <button class="btn-secondary" onclick="closeTaskModal()" data-i18n="btn_cancel">Cancelar</button>
+                    <button class="btn-primary" onclick="saveTaskModal()" data-i18n="btn_save">Guardar</button>
                 </div>
             </div>
         </div>
