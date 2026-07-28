@@ -19,11 +19,11 @@ function renderBoard() {
         boardWrapper.innerHTML = `
             <div class="empty-board-banner" style="width:100%; max-width:640px; margin:40px auto; text-align:center; padding:48px 24px; background:var(--bg-card); border:2px dashed var(--border); border-radius:var(--radius); box-shadow:var(--shadow-sm);">
                 <span style="font-size:48px; display:block; margin-bottom:12px;">🏃💨</span>
-                <h3 style="font-size:20px; font-weight:800; margin:0 0 8px 0; color:var(--text-main);">Nenhum Sprint Ativo no Quadro</h3>
+                <h3 style="font-size:20px; font-weight:800; margin:0 0 8px 0; color:var(--text-main);">${t('board_no_active_sprint_title')}</h3>
                 <p style="color:var(--text-muted); font-size:14px; margin:0 0 20px 0; line-height:1.5;">
-                    Vá ao Backlog para planear as suas tarefas num Sprint/Release e clique em <strong style="color:var(--primary);">"▶️ Iniciar Sprint"</strong> para ativar o quadro.
+                    ${t('board_no_active_sprint_desc')}
                 </p>
-                <button class="btn-primary" onclick="switchView('backlog')" style="font-size:14px; padding:10px 20px;">📋 Ir para o Backlog & Planear Sprint</button>
+                <button class="btn-primary" onclick="switchView('backlog')" style="font-size:14px; padding:10px 20px;">${t('board_go_to_backlog_btn')}</button>
             </div>
         `;
         return;
@@ -58,7 +58,7 @@ function renderBoard() {
     const addColBtn = document.createElement('button');
     addColBtn.className = 'add-column-btn';
     addColBtn.onclick = openAddColumnModal;
-    addColBtn.innerHTML = `<span>➕ Adicionar Coluna</span>`;
+    addColBtn.innerHTML = `<span>${t('btn_add_column')}</span>`;
     boardWrapper.appendChild(addColBtn);
 
     let counts = {};

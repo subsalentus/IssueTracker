@@ -370,14 +370,26 @@ button,
     text-decoration: underline;
 }
 
+.lang-select-btn,
 .theme-toggle-btn {
-    background: var(--bg-page);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     color: var(--text-main);
     padding: 6px 10px;
     border-radius: 8px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
+    font-weight: 600;
+    outline: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.lang-select-btn:hover,
+.theme-toggle-btn:hover {
+    border-color: var(--border-hover);
 }
 
 /* Main Board Layout */
@@ -393,7 +405,12 @@ button,
     gap: 20px;
     align-items: flex-start;
     overflow-x: auto;
-    padding: 4px 4px 16px 4px;
+    padding: 24px 28px;
+    flex: 1;
+}
+
+.backlog-container {
+    padding: 24px 28px;
     flex: 1;
 }
 
@@ -1236,8 +1253,7 @@ button,
     display: flex;
     flex-direction: column;
     background: var(--bg-page);
-    padding: 24px 28px;
-    gap: 20px;
+    padding: 0;
 }
 
 /* Backlog 2-Box Split Layout & Sprint Execution */

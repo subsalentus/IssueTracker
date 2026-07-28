@@ -11,7 +11,7 @@ function openCreateModalWithStatus(status) {
 function openCreateModal() {
     const project = getActiveProject();
     currentEditingId = null;
-    document.getElementById('taskModalTitle').innerText = 'Criar Nova Tarefa';
+    document.getElementById('taskModalTitle').innerText = t('modal_create_task_title');
     document.getElementById('taskTitle').value = '';
     document.getElementById('taskDescription').value = '';
     document.getElementById('taskType').value = 'Task';
@@ -33,7 +33,7 @@ function openEditModal(id) {
     if (!issue) return;
 
     currentEditingId = id;
-    document.getElementById('taskModalTitle').innerText = `Editar Tarefa (${issue.id})`;
+    document.getElementById('taskModalTitle').innerText = `${t('modal_edit_task_title')} (${issue.id})`;
     document.getElementById('taskTitle').value = issue.title;
     document.getElementById('taskDescription').value = issue.description || '';
     document.getElementById('taskType').value = issue.type || 'Task';

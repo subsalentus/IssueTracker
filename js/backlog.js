@@ -6,6 +6,7 @@ function renderBacklogView() {
     backlogContainer.innerHTML = '';
 
     const filterEpic = document.getElementById('filterEpic').value;
+    const filterSprint = document.getElementById('filterSprint')?.value || 'Todos';
     const filterPriority = document.getElementById('filterPriority').value;
     const filterType = document.getElementById('filterType').value;
     const searchText = document.getElementById('searchInput').value.toLowerCase().trim();
@@ -13,6 +14,10 @@ function renderBacklogView() {
     // Filter Issues
     const filteredIssues = project.issues.filter(issue => {
         if (filterEpic !== "Todos" && issue.epic !== filterEpic) return false;
+        if (filterSprint !== "Todos") {
+            if (filterSprint === "none" && issue.sprintId) return false;
+            if (filterSprint !== "none" && issue.sprintId !== filterSprint) return false;
+        }
         if (filterPriority !== "Todos" && issue.priority !== filterPriority) return false;
         if (filterType !== "Todos" && issue.type !== filterType) return false;
         if (searchText && !issue.title.toLowerCase().includes(searchText) && 
@@ -32,12 +37,12 @@ function renderBacklogView() {
 
     const inlineCreateHTML = `
         <div class="backlog-section-header">
-            <h3 class="backlog-section-title">🏃 Sprints & Releases</h3>
+            <h3 class="backlog-section-title">${t('backlog_sprints_header')}</h3>
         </div>
         <div class="inline-create-sprint">
-            <input type="text" id="inlineSprintName" placeholder="Ex: Sprint 1 - Lançamento MVP..." onkeydown="if(event.key==='Enter') createInlineSprint()">
-            <input type="text" id="inlineSprintGoal" placeholder="Objetivo do Sprint (opcional)..." onkeydown="if(event.key==='Enter') createInlineSprint()">
-            <button class="btn-primary" style="align-self:flex-end; font-size:13px;" onclick="createInlineSprint()">+ Criar Sprint / Release</button>
+            <input type="text" id="inlineSprintName" placeholder="${t('backlog_sprint_name_ph')}" onkeydown="if(event.key==='Enter') createInlineSprint()">
+            <input type="text" id="inlineSprintGoal" placeholder="${t('backlog_sprint_goal_ph')}" onkeydown="if(event.key==='Enter') createInlineSprint()">
+            <button class="btn-primary" style="align-self:flex-end; font-size:13px;" onclick="createInlineSprint()">${t('btn_create_sprint')}</button>
         </div>
         <div id="leftSprintsList" style="display:flex; flex-direction:column; gap:16px; margin-top:8px;"></div>
     `;
@@ -54,10 +59,10 @@ function renderBacklogView() {
     rightBox.innerHTML = `
         <div class="backlog-section-header">
             <h3 class="backlog-section-title">
-                📋 Tarefas a Resolver
-                <span class="backlog-section-count">${backlogPoolIssues.length} tarefas</span>
+                ${t('backlog_pool_header')}
+                <span class="backlog-section-count">${backlogPoolIssues.length}</span>
             </h3>
-            <button class="btn-primary" onclick="openCreateModalWithStatus('backlog')">+ Nova Tarefa</button>
+            <button class="btn-primary" onclick="openCreateModalWithStatus('backlog')">${t('btn_new_task')}</button>
         </div>
         <div class="sprint-dropzone" id="${poolDropzoneId}" 
              style="min-height:380px; flex:1;"
@@ -75,7 +80,7 @@ function renderBacklogView() {
     const sprints = project.sprints || [];
 
     if (sprints.length === 0) {
-        leftSprintsList.innerHTML = `<p style="color:var(--text-muted); font-size:13px; font-style:italic;">Nenhum Sprint criado. Crie um Sprint acima para começar a planear.</p>`;
+        leftSprintsList.innerHTML = `<p style="color:var(--text-muted); font-size:13px; font-style:italic;">${t('no_sprints_created')}</p>`;
     } else {
         sprints.forEach(sprint => {
             const sprintContainer = document.createElement('div');
@@ -92,20 +97,20 @@ function renderBacklogView() {
             }[sprint.status] || 'sprint-status-planned';
 
             const statusText = {
-                'active': '🟢 Sprint Ativo',
-                'planned': '🔵 Planeado',
-                'completed': '⚪ Concluído'
-            }[sprint.status] || 'Planeado';
+                'active': t('sprint_status_active'),
+                'planned': t('sprint_status_planned'),
+                'completed': t('sprint_status_completed')
+            }[sprint.status] || t('sprint_status_planned');
 
             const dropzoneId = `sprint-dropzone-${sprint.id}`;
 
             let actionBtnHTML = '';
             if (sprint.status === 'planned') {
-                actionBtnHTML = `<button class="btn-start-sprint" onclick="startSprint('${sprint.id}')">▶️ Iniciar Sprint</button>`;
+                actionBtnHTML = `<button class="btn-start-sprint" onclick="startSprint('${sprint.id}')">${t('btn_start_sprint')}</button>`;
             } else if (sprint.status === 'active') {
-                actionBtnHTML = `<button class="btn-secondary" style="font-size:12px; padding:4px 8px;" onclick="setSprintStatus('${sprint.id}', 'completed')">✅ Concluir</button>`;
+                actionBtnHTML = `<button class="btn-secondary" style="font-size:12px; padding:4px 8px;" onclick="setSprintStatus('${sprint.id}', 'completed')">${t('btn_conclude_sprint')}</button>`;
             } else {
-                actionBtnHTML = `<button class="btn-secondary" style="font-size:12px; padding:4px 8px;" onclick="setSprintStatus('${sprint.id}', 'planned')">↩️ Reabrir</button>`;
+                actionBtnHTML = `<button class="btn-secondary" style="font-size:12px; padding:4px 8px;" onclick="setSprintStatus('${sprint.id}', 'planned')">${t('btn_reopen_sprint')}</button>`;
             }
 
             sprintContainer.innerHTML = `

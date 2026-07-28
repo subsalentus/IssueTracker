@@ -33,13 +33,22 @@ function toggleActionsDropdown() {
     if (dropdown) dropdown.classList.toggle('show');
 }
 
+function toggleLangDropdown() {
+    const dropdown = document.getElementById('langDropdown');
+    if (dropdown) dropdown.classList.toggle('show');
+}
+
 // Close dropdown menus when clicking outside
 window.addEventListener('click', function(e) {
     if (!e.target.closest('#projectTitleBtn') && !e.target.closest('#projectTitleDropdown')) {
         const dropdown = document.getElementById('projectTitleDropdown');
         if (dropdown) dropdown.classList.remove('show');
     }
-    if (!e.target.closest('.dropdown')) {
+    if (!e.target.closest('#langSelectBtn') && !e.target.closest('#langDropdown')) {
+        const dropdown = document.getElementById('langDropdown');
+        if (dropdown) dropdown.classList.remove('show');
+    }
+    if (!e.target.closest('#actionsDropdownBtn') && !e.target.closest('#actionsDropdown')) {
         const dropdown = document.getElementById('actionsDropdown');
         if (dropdown) dropdown.classList.remove('show');
     }
@@ -81,7 +90,14 @@ function switchProject(key) {
 // Filter Toolbar Controller
 function toggleFilterBar() {
     const toolbar = document.getElementById('filterToolbar');
-    if (toolbar) toolbar.classList.toggle('open');
+    const btn = document.getElementById('toggleFilterBtn');
+    if (toolbar) {
+        toolbar.classList.toggle('show');
+        toolbar.classList.toggle('open');
+    }
+    if (btn) {
+        btn.classList.toggle('active');
+    }
 }
 
 function updateFilterBadgeCount() {
@@ -110,12 +126,16 @@ function updateFilterBadgeCount() {
 }
 
 function clearFilters() {
-    document.getElementById('filterEpic').value = 'Todos';
+    if (document.getElementById('filterEpic')) document.getElementById('filterEpic').value = 'Todos';
     if (document.getElementById('filterSprint')) document.getElementById('filterSprint').value = 'Todos';
-    document.getElementById('filterPriority').value = 'Todos';
-    document.getElementById('filterType').value = 'Todos';
-    document.getElementById('searchInput').value = '';
+    if (document.getElementById('filterPriority')) document.getElementById('filterPriority').value = 'Todos';
+    if (document.getElementById('filterType')) document.getElementById('filterType').value = 'Todos';
+    if (document.getElementById('searchInput')) document.getElementById('searchInput').value = '';
     onFilterChange();
+}
+
+function resetFilters() {
+    clearFilters();
 }
 
 function onFilterChange() {
@@ -129,7 +149,7 @@ function updateFilterDropdowns() {
         const currentEpic = epicSelect.value;
         const allEpics = [...new Set([...(project.epics || []), ...project.issues.map(i => i.epic)])].filter(Boolean).sort();
 
-        let epicHTML = '<option value="Todos">Todos</option>';
+        let epicHTML = `<option value="Todos">${t('filter_all')}</option>`;
         allEpics.forEach(epic => epicHTML += `<option value="${escapeHTML(epic)}">${escapeHTML(epic)}</option>`);
 
         epicSelect.innerHTML = epicHTML;
@@ -140,10 +160,10 @@ function updateFilterDropdowns() {
     const sprintSelect = document.getElementById('filterSprint');
     if (sprintSelect) {
         const currentSprint = sprintSelect.value;
-        let sprintHTML = '<option value="Todos">Todos os Sprints</option>';
-        sprintHTML += '<option value="none">Sem Sprint (Apenas Backlog)</option>';
+        let sprintHTML = `<option value="Todos">${t('filter_all_sprints')}</option>`;
+        sprintHTML += `<option value="none">${t('filter_no_sprint')}</option>`;
         (project.sprints || []).forEach(s => {
-            sprintHTML += `<option value="${escapeHTML(s.name)}">${escapeHTML(s.name)}</option>`;
+            sprintHTML += `<option value="${s.id}">${escapeHTML(s.name)}</option>`;
         });
         sprintSelect.innerHTML = sprintHTML;
         sprintSelect.value = (currentSprint === "Todos" || currentSprint === "none" || (project.sprints || []).some(s => s.id === currentSprint)) ? currentSprint : "Todos";
@@ -157,6 +177,8 @@ function updateFilterDropdowns() {
 
 // Main Render Controller
 function renderCurrentView() {
+    applyTranslations();
+    updateLangSelect();
     updateFilterDropdowns();
     updateFilterBadgeCount();
 

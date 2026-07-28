@@ -31,25 +31,38 @@
         </div>
 
         <div class="header-actions">
-            <button class="btn-primary" onclick="openCreateModal()">+ Nova Tarefa</button>
+            <button class="btn-primary" onclick="openCreateModal()" data-i18n="btn_new_task">+ Nova Tarefa</button>
             <button class="btn-secondary" onclick="toggleFilterBar()" id="toggleFilterBtn">
-                <span class="filter-btn-icon">🔍</span> Filtros <span id="filterActiveBadge" class="filter-badge" style="display: none;">0</span>
+                <span class="filter-btn-icon">🔍</span> <span data-i18n="btn_filters">Filtros</span> <span id="filterActiveBadge" class="filter-badge" style="display: none;">0</span>
             </button>
             
             <div class="dropdown">
-                <button class="btn-secondary" onclick="toggleActionsDropdown()">⚙️ Opções ▾</button>
+                <button id="actionsDropdownBtn" class="btn-secondary" onclick="toggleActionsDropdown()" data-i18n="btn_options">⚙️ Opções ▾</button>
                 <div class="dropdown-menu" id="actionsDropdown">
-                    <button class="dropdown-item" onclick="exportCSV()">📥 Exportar CSV</button>
+                    <button class="dropdown-item" onclick="exportCSV()" data-i18n="export_csv">📥 Exportar CSV</button>
                     <label class="dropdown-item file-upload-label">
-                        📂 Importar CSV
+                        <span data-i18n="import_csv">📂 Importar CSV</span>
                         <input type="file" id="csvFileInput" accept=".csv" onchange="importCSV(event)" style="display: none;">
                     </label>
                     <div class="dropdown-divider"></div>
-                    <button class="dropdown-item text-danger" onclick="clearBoard()">🗑️ Apagar Quadro</button>
-                    <button class="dropdown-item text-danger" onclick="deleteCurrentProject()">❌ Eliminar Projeto</button>
+                    <button class="dropdown-item text-danger" onclick="clearBoard()" data-i18n="clear_board">🗑️ Apagar Quadro</button>
+                    <button class="dropdown-item text-danger" onclick="deleteCurrentProject()" data-i18n="delete_project">❌ Eliminar Projeto</button>
                 </div>
             </div>
 
+            <div class="dropdown">
+                <button id="langSelectBtn" class="lang-select-btn" onclick="toggleLangDropdown()" title="Idioma / Language">
+                    <span id="currentLangFlag">🇵🇹</span> <span id="currentLangText">PT</span> ▾
+                </button>
+                <div class="dropdown-menu" id="langDropdown">
+                    <button class="dropdown-item" onclick="setLanguage('pt')">
+                        <span style="font-size:16px; margin-right:6px;">🇵🇹</span> Português (PT)
+                    </button>
+                    <button class="dropdown-item" onclick="setLanguage('en')">
+                        <span style="font-size:16px; margin-right:6px;">🇬🇧</span> English (EN)
+                    </button>
+                </div>
+            </div>
             <button id="themeToggleBtn" class="theme-toggle-btn" onclick="toggleTheme()">🌙</button>
         </div>
     </header>
@@ -61,11 +74,11 @@
             <div class="sidebar-menu">
                 <button class="sidebar-nav-item active" id="sidebarTabBoard" onclick="switchView('board')">
                     <span class="sidebar-icon">📊</span>
-                    <span class="sidebar-label">Quadro</span>
+                    <span class="sidebar-label" data-i18n="nav_board">Quadro</span>
                 </button>
                 <button class="sidebar-nav-item" id="sidebarTabBacklog" onclick="switchView('backlog')">
                     <span class="sidebar-icon">📋</span>
-                    <span class="sidebar-label">Backlog</span>
+                    <span class="sidebar-label" data-i18n="nav_backlog">Backlog</span>
                     <span id="backlogCountBadge" class="tab-badge">0</span>
                 </button>
             </div>
@@ -285,6 +298,7 @@
         </div>
     </div>
 
+    <script src="js/i18n.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/state.js"></script>
     <script src="js/epics.js"></script>

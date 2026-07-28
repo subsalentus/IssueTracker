@@ -7,7 +7,7 @@ function startSprint(sprintId) {
 
     const currentActive = (project.sprints || []).find(s => s.status === 'active' && s.id !== sprintId);
     if (currentActive) {
-        alert(`Já existe um Sprint ativo ("${currentActive.name}"). Conclua o Sprint ativo antes de iniciar um novo.`);
+        alert(t('alert_sprint_active_exists', { name: currentActive.name }));
         return;
     }
 
@@ -32,13 +32,13 @@ function setSprintStatus(sprintId, status) {
     if (status === 'active') {
         const currentActive = (project.sprints || []).find(s => s.status === 'active' && s.id !== sprintId);
         if (currentActive) {
-            alert(`Já existe um Sprint ativo ("${currentActive.name}"). Conclua o Sprint ativo antes de iniciar um novo.`);
+            alert(t('alert_sprint_active_exists', { name: currentActive.name }));
             return;
         }
     }
 
     if (status === 'completed') {
-        if (!confirm(`Concluir o Sprint "${sprint.name}"? As tarefas não concluídas voltarão para o Backlog Geral.`)) {
+        if (!confirm(t('confirm_conclude_sprint', { name: sprint.name }))) {
             return;
         }
         // Return incomplete tasks to Backlog
@@ -60,7 +60,7 @@ function deleteSprint(sprintId) {
     const sprint = (project.sprints || []).find(s => s.id === sprintId);
     if (!sprint) return;
 
-    if (confirm(`Eliminar o sprint "${sprint.name}"? As tarefas associadas voltarão ao Backlog geral.`)) {
+    if (confirm(t('confirm_delete_sprint', { name: sprint.name }))) {
         project.sprints = project.sprints.filter(s => s.id !== sprintId);
         project.issues.forEach(i => {
             if (i.sprintId === sprintId) i.sprintId = null;
