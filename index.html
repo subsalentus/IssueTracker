@@ -10,22 +10,31 @@
 
 <body>
 
-    <!-- Header Principal Limpo -->
+    <!-- Header Principal -->
     <header class="top-navbar">
         <div class="brand-section">
-            <h1 class="app-logo">
-                <span>🚀</span> IssueTracker
-            </h1>
-
-            <div class="project-selector-wrapper">
-                <select id="projectSelect" class="project-select" onchange="switchProject(this.value)"></select>
-                <button class="btn-icon" onclick="openNewProjectModal()" title="Criar Novo Projeto">➕</button>
+            <div class="dropdown project-title-dropdown">
+                <button class="project-title-btn" id="projectTitleBtn" onclick="toggleProjectTitleDropdown()">
+                    <span class="project-title-icon">🚀</span>
+                    <span id="currentProjectTitle" class="current-project-name">Carregando...</span>
+                    <span class="dropdown-arrow">▾</span>
+                </button>
+                <div class="dropdown-menu project-dropdown-menu" id="projectTitleDropdown">
+                    <div class="dropdown-header">Os Seus Projetos</div>
+                    <div id="projectListItems" class="project-list-items"></div>
+                    <div class="dropdown-divider"></div>
+                    <button class="dropdown-item" onclick="openNewProjectModal()">➕ Criar Novo Projeto</button>
+                </div>
             </div>
+
+            <button class="btn-icon" onclick="openProjectSettingsModal()" title="Definições do Projeto" style="margin-left: 4px;">⚙️</button>
         </div>
 
         <div class="header-actions">
             <button class="btn-primary" onclick="openCreateModal()">+ Nova Tarefa</button>
-            <button class="btn-secondary" onclick="toggleFilterBar()" id="toggleFilterBtn">🔍 Filtros</button>
+            <button class="btn-secondary" onclick="toggleFilterBar()" id="toggleFilterBtn">
+                <span class="filter-btn-icon">🔍</span> Filtros <span id="filterActiveBadge" class="filter-badge" style="display: none;">0</span>
+            </button>
             
             <div class="dropdown">
                 <button class="btn-secondary" onclick="toggleActionsDropdown()">⚙️ Opções ▾</button>
@@ -45,48 +54,74 @@
         </div>
     </header>
 
-    <!-- Barra de Filtros Expansível/Compacta -->
-    <div class="filter-toolbar" id="filterToolbar">
-        <div class="filter-row">
-            <input type="text" id="searchInput" placeholder="🔍 Pesquisar por título, ID..." oninput="renderBoard()" class="search-input">
-            
-            <div class="filter-group">
-                <span>Épico:</span>
-                <select id="filterEpic" onchange="renderBoard()">
-                    <option value="Todos">Todos</option>
-                </select>
+    <!-- Layout com Navegação Lateral (Sidebar) -->
+    <div class="app-layout">
+        <!-- Sidebar Lateral de Navegação -->
+        <aside class="sidebar-nav">
+            <div class="sidebar-menu">
+                <button class="sidebar-nav-item active" id="sidebarTabBoard" onclick="switchView('board')">
+                    <span class="sidebar-icon">📊</span>
+                    <span class="sidebar-label">Quadro</span>
+                </button>
+                <button class="sidebar-nav-item" id="sidebarTabBacklog" onclick="switchView('backlog')">
+                    <span class="sidebar-icon">📋</span>
+                    <span class="sidebar-label">Backlog</span>
+                    <span id="backlogCountBadge" class="tab-badge">0</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Área Principal de Conteúdo -->
+        <main class="main-content-area">
+            <!-- Barra de Filtros Expansível/Compacta -->
+            <div class="filter-toolbar" id="filterToolbar">
+                <div class="filter-row">
+                    <input type="text" id="searchInput" placeholder="🔍 Pesquisar por título, ID..." oninput="onFilterChange()" class="search-input">
+                    
+                    <div class="filter-group">
+                        <span>Épico:</span>
+                        <select id="filterEpic" onchange="onFilterChange()">
+                            <option value="Todos">Todos</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <span>Sprint/Release:</span>
+                        <select id="filterSprint" onchange="onFilterChange()">
+                            <option value="Todos">Todos</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <span>Tipo:</span>
+                        <select id="filterType" onchange="onFilterChange()">
+                            <option value="Todos">Todos</option>
+                            <option value="Task">Task 📑</option>
+                            <option value="Bug">Bug 🐛</option>
+                            <option value="Story">Story 📖</option>
+                            <option value="Epic">Epic ⚡</option>
+                            <option value="Feature">Feature 🌟</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <span>Prioridade:</span>
+                        <select id="filterPriority" onchange="onFilterChange()">
+                            <option value="Todos">Todas</option>
+                            <option value="Alta">Alta 🔴</option>
+                            <option value="Média">Média 🟡</option>
+                            <option value="Baixa">Baixa 🟢</option>
+                        </select>
+                    </div>
+
+                    <button class="btn-text" onclick="resetFilters()">Limpar Filtros</button>
+                </div>
             </div>
 
-            <div class="filter-group">
-                <span>Tipo:</span>
-                <select id="filterType" onchange="renderBoard()">
-                    <option value="Todos">Todos</option>
-                    <option value="Task">Task 📑</option>
-                    <option value="Bug">Bug 🐛</option>
-                    <option value="Story">Story 📖</option>
-                    <option value="Epic">Epic ⚡</option>
-                    <option value="Feature">Feature 🌟</option>
-                </select>
-            </div>
-
-            <div class="filter-group">
-                <span>Prioridade:</span>
-                <select id="filterPriority" onchange="renderBoard()">
-                    <option value="Todos">Todas</option>
-                    <option value="Alta">Alta 🔴</option>
-                    <option value="Média">Média 🟡</option>
-                    <option value="Baixa">Baixa 🟢</option>
-                </select>
-            </div>
-
-            <button class="btn-text" onclick="resetFilters()">Limpar Filtros</button>
-        </div>
+            <div class="board-wrapper" id="boardWrapper"></div>
+            <div class="backlog-container" id="backlogViewContainer" style="display: none;"></div>
+        </main>
     </div>
-
-    <!-- Conteúdo Principal: Quadro Kanban -->
-    <main class="main-container">
-        <div class="board-wrapper" id="boardWrapper"></div>
-    </main>
 
     <!-- Modal de Criar/Editar Tarefa -->
     <div class="modal-overlay" id="taskModalOverlay">
@@ -130,13 +165,16 @@
 
                 <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                     <div class="form-group" style="flex: 1; min-width: 140px;">
-                        <label>Épico</label>
-                        <select id="taskEpic">
-                            <option value="Epic 1: Geoespacial">Epic 1: Geoespacial</option>
-                            <option value="Epic 2: Backend">Epic 2: Backend</option>
-                            <option value="Epic 3: Hardware/Navegação">Epic 3: Hardware/Navegação</option>
-                            <option value="Outro">Outro</option>
-                        </select>
+                        <label style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>Épico</span>
+                            <a href="#" onclick="openCreateEpicPrompt(); return false;" style="font-size:11px; color:var(--primary); text-transform:none; font-weight:600; text-decoration:none;">+ Criar Épico</a>
+                        </label>
+                        <select id="taskEpic" onchange="handleTaskEpicChange(this.value)"></select>
+                    </div>
+
+                    <div class="form-group" style="flex: 1; min-width: 140px;">
+                        <label>Sprint / Release</label>
+                        <select id="taskSprint"></select>
                     </div>
 
                     <div class="form-group" style="flex: 1; min-width: 120px;">
@@ -178,6 +216,40 @@
                     <button class="btn-secondary" onclick="closeTaskModal()">Cancelar</button>
                     <button class="btn-primary" onclick="saveTaskModal()">Guardar</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Definições do Projeto -->
+    <div class="modal-overlay" id="projectSettingsModalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="projectSettingsTitle">⚙️ Definições do Projeto</h3>
+                <button class="icon-btn" onclick="closeProjectSettingsModal()">✖️</button>
+            </div>
+            <div class="modal-body">
+                <!-- Informações do Projeto -->
+                <div class="settings-section">
+                    <h4 class="settings-section-title">📌 Dados Gerais do Projeto</h4>
+                    <div style="display: flex; gap: 12px;">
+                        <div class="form-group" style="width: 120px;">
+                            <label>Chave (ID)</label>
+                            <input type="text" id="settingsProjectKey" disabled style="background: var(--bg-board); font-weight:700;">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label>Nome do Projeto</label>
+                            <input type="text" id="settingsProjectName">
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 8px;">
+                        <label>Descrição</label>
+                        <textarea id="settingsProjectDesc" rows="3"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeProjectSettingsModal()">Cancelar</button>
+                <button class="btn-primary" onclick="saveProjectDetails()">Guardar Alterações</button>
             </div>
         </div>
     </div>

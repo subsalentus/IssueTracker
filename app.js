@@ -1,4 +1,4 @@
-// Default Initial State
+// Default Initial State (Empty for user creation)
 const DEFAULT_WORKSPACE = {
     activeProjectId: "TRL",
     projects: [
@@ -7,67 +7,15 @@ const DEFAULT_WORKSPACE = {
             name: "App Trilhos Portugal",
             description: "Gestão e desenvolvimento da aplicação Trilhos Portugal",
             columns: [
+                { id: "backlog", title: "Backlog" },
                 { id: "todo", title: "To Do" },
                 { id: "in-progress", title: "In Progress" },
                 { id: "review", title: "In Review" },
                 { id: "done", title: "Done" }
             ],
-            issues: [
-                {
-                    id: "TRL-1",
-                    title: "Integrar Mapa de Trilhos com Mapbox GL",
-                    description: "Adicionar camada de mapa interativo com ficheiros GPX para navegação de percursos.",
-                    type: "Feature",
-                    epic: "Epic 1: Geoespacial",
-                    priority: "Alta",
-                    storyPoints: 5,
-                    assignee: "Marcelo",
-                    status: "in-progress",
-                    subtasks: [
-                        { id: 1, text: "Configurar API key Mapbox", completed: true },
-                        { id: 2, text: "Carregar ficheiro GPX de teste", completed: false }
-                    ]
-                },
-                {
-                    id: "TRL-2",
-                    title: "Autenticação OAuth com Google e Apple",
-                    description: "Implementar login social para os utilizadores guardarem trilhos favoritos.",
-                    type: "Story",
-                    epic: "Epic 2: Backend",
-                    priority: "Alta",
-                    storyPoints: 3,
-                    assignee: "Ana",
-                    status: "todo",
-                    subtasks: []
-                },
-                {
-                    id: "TRL-3",
-                    title: "Otimizar Consumo de Bateria no GPS Offline",
-                    description: "Registar localização em background com throttling de coordenadas.",
-                    type: "Task",
-                    epic: "Epic 3: Hardware/Navegação",
-                    priority: "Média",
-                    storyPoints: 8,
-                    assignee: "Pedro",
-                    status: "todo",
-                    subtasks: []
-                },
-                {
-                    id: "TRL-4",
-                    title: "Exportação de Dados em KML/GPX",
-                    description: "Permitir ao utilizador descarregar os seus registos de caminhada.",
-                    type: "Story",
-                    epic: "Epic 1: Geoespacial",
-                    priority: "Baixa",
-                    storyPoints: 2,
-                    assignee: "Sofia",
-                    status: "done",
-                    subtasks: [
-                        { id: 1, text: "Validar formato XML KML", completed: true },
-                        { id: 2, text: "Testar download no Safari iOS", completed: true }
-                    ]
-                }
-            ]
+            sprints: [],
+            epics: [],
+            issues: []
         }
     ]
 };
@@ -81,8 +29,31 @@ const ISSUE_TYPE_ICONS = {
 };
 
 let workspace = JSON.parse(localStorage.getItem('trilhosWorkspace')) || JSON.parse(JSON.stringify(DEFAULT_WORKSPACE));
+let currentView = 'board'; // 'board' or 'backlog'
 let draggedTicketId = null;
 let currentEditingId = null; // null if creating new ticket, string ID if editing
+
+// Workspace Migration: Ensure structure & arrays exist in all projects
+function migrateWorkspaceData() {
+    if (!workspace || !workspace.projects) {
+        workspace = JSON.parse(JSON.stringify(DEFAULT_WORKSPACE));
+        return;
+    }
+
+    workspace.projects.forEach(project => {
+        if (!project.columns) project.columns = [];
+        const hasBacklogCol = project.columns.some(c => c.id === 'backlog');
+        if (!hasBacklogCol) {
+            project.columns.unshift({ id: "backlog", title: "Backlog" });
+        }
+        if (!project.sprints) project.sprints = [];
+        if (!project.epics) project.epics = [];
+        if (!project.issues) project.issues = [];
+    });
+    saveWorkspace();
+}
+
+migrateWorkspaceData();
 
 // Theme Initialization
 const savedTheme = localStorage.getItem('trilhosTheme') || 'light';
@@ -115,10 +86,72 @@ function saveWorkspace() {
     localStorage.setItem('trilhosWorkspace', JSON.stringify(workspace));
 }
 
-// UI Toggles
+// View Switching (Board vs Backlog)
+function switchView(viewName) {
+    currentView = viewName;
+    const boardTab = document.getElementById('sidebarTabBoard');
+    const backlogTab = document.getElementById('sidebarTabBacklog');
+    const boardWrapper = document.getElementById('boardWrapper');
+    const backlogContainer = document.getElementById('backlogViewContainer');
+
+    if (boardTab && backlogTab) {
+        if (viewName === 'board') {
+            boardTab.classList.add('active');
+            backlogTab.classList.remove('active');
+            boardWrapper.style.display = 'flex';
+            backlogContainer.style.display = 'none';
+        } else {
+            boardTab.classList.remove('active');
+            backlogTab.classList.add('active');
+            boardWrapper.style.display = 'none';
+            backlogContainer.style.display = 'flex';
+        }
+    }
+
+    renderCurrentView();
+}
+
+// Filter handling & animations
 function toggleFilterBar() {
     const filterToolbar = document.getElementById('filterToolbar');
+    const btn = document.getElementById('toggleFilterBtn');
     filterToolbar.classList.toggle('show');
+    btn.classList.toggle('active', filterToolbar.classList.contains('show'));
+}
+
+function onFilterChange() {
+    updateFilterBadgeCount();
+    renderCurrentView();
+}
+
+function updateFilterBadgeCount() {
+    const filterEpic = document.getElementById('filterEpic').value;
+    const filterSprint = document.getElementById('filterSprint')?.value || 'Todos';
+    const filterPriority = document.getElementById('filterPriority').value;
+    const filterType = document.getElementById('filterType').value;
+    const searchText = document.getElementById('searchInput').value.trim();
+
+    let activeCount = 0;
+    if (filterEpic !== 'Todos') activeCount++;
+    if (filterSprint !== 'Todos') activeCount++;
+    if (filterPriority !== 'Todos') activeCount++;
+    if (filterType !== 'Todos') activeCount++;
+    if (searchText !== '') activeCount++;
+
+    const badge = document.getElementById('filterActiveBadge');
+    if (badge) {
+        if (activeCount > 0) {
+            badge.innerText = activeCount;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+function toggleProjectTitleDropdown() {
+    const menu = document.getElementById('projectTitleDropdown');
+    if (menu) menu.classList.toggle('show');
 }
 
 function toggleActionsDropdown() {
@@ -126,9 +159,13 @@ function toggleActionsDropdown() {
     menu.classList.toggle('show');
 }
 
-// Close dropdown when clicking outside
+// Close dropdowns when clicking outside
 window.addEventListener('click', (e) => {
-    if (!e.target.closest('.dropdown')) {
+    if (!e.target.closest('.project-title-dropdown')) {
+        const projMenu = document.getElementById('projectTitleDropdown');
+        if (projMenu) projMenu.classList.remove('show');
+    }
+    if (!e.target.closest('.dropdown:not(.project-title-dropdown)')) {
         const menu = document.getElementById('actionsDropdown');
         if (menu) menu.classList.remove('show');
     }
@@ -137,29 +174,44 @@ window.addEventListener('click', (e) => {
 function resetFilters() {
     document.getElementById('searchInput').value = '';
     document.getElementById('filterEpic').value = 'Todos';
+    if (document.getElementById('filterSprint')) document.getElementById('filterSprint').value = 'Todos';
     document.getElementById('filterType').value = 'Todos';
     document.getElementById('filterPriority').value = 'Todos';
-    renderBoard();
+    onFilterChange();
 }
 
-// Project Selector
+// Project Selector (Title Dropdown)
 function renderProjectSelector() {
-    const select = document.getElementById('projectSelect');
-    select.innerHTML = '';
+    const project = getActiveProject();
+    const titleElem = document.getElementById('currentProjectTitle');
+    if (titleElem && project) {
+        titleElem.innerText = project.name;
+    }
+
+    const listContainer = document.getElementById('projectListItems');
+    if (!listContainer) return;
+    listContainer.innerHTML = '';
+
     workspace.projects.forEach(p => {
-        const option = document.createElement('option');
-        option.value = p.key;
-        option.textContent = `${p.name} (${p.key})`;
-        if (p.key === workspace.activeProjectId) option.selected = true;
-        select.appendChild(option);
+        const btn = document.createElement('button');
+        const isActive = p.key === workspace.activeProjectId;
+        btn.className = `dropdown-item ${isActive ? 'project-item-active' : ''}`;
+        btn.innerHTML = `<span>🚀 ${escapeHTML(p.name)}</span> <span style="margin-left:auto; font-size:11px; opacity:0.7;">(${p.key})</span>`;
+        btn.onclick = () => {
+            switchProject(p.key);
+            const menu = document.getElementById('projectTitleDropdown');
+            if (menu) menu.classList.remove('show');
+        };
+        listContainer.appendChild(btn);
     });
 }
 
 function switchProject(key) {
     workspace.activeProjectId = key;
     saveWorkspace();
+    renderProjectSelector();
     updateFilterDropdowns();
-    renderBoard();
+    renderCurrentView();
 }
 
 function openNewProjectModal() {
@@ -189,11 +241,14 @@ function saveNewProjectModal() {
         name: name,
         description: desc,
         columns: [
+            { id: "backlog", title: "Backlog" },
             { id: "todo", title: "To Do" },
             { id: "in-progress", title: "In Progress" },
             { id: "review", title: "In Review" },
             { id: "done", title: "Done" }
         ],
+        sprints: [],
+        epics: [],
         issues: []
     });
 
@@ -203,7 +258,7 @@ function saveNewProjectModal() {
     closeNewProjectModal();
     renderProjectSelector();
     updateFilterDropdowns();
-    renderBoard();
+    renderCurrentView();
 }
 
 function closeNewProjectModal() {
@@ -224,7 +279,86 @@ function deleteCurrentProject() {
 
         renderProjectSelector();
         updateFilterDropdowns();
-        renderBoard();
+        renderCurrentView();
+    }
+}
+
+// Project Settings Modal
+function openProjectSettingsModal() {
+    const project = getActiveProject();
+    document.getElementById('settingsProjectKey').value = project.key;
+    document.getElementById('settingsProjectName').value = project.name;
+    document.getElementById('settingsProjectDesc').value = project.description || '';
+    document.getElementById('projectSettingsModalOverlay').classList.add('active');
+}
+
+function closeProjectSettingsModal() {
+    document.getElementById('projectSettingsModalOverlay').classList.remove('active');
+}
+
+function saveProjectDetails() {
+    const project = getActiveProject();
+    const name = document.getElementById('settingsProjectName').value.trim();
+    const desc = document.getElementById('settingsProjectDesc').value.trim();
+
+    if (!name) {
+        alert('O nome do projeto não pode estar vazio.');
+        return;
+    }
+
+    project.name = name;
+    project.description = desc;
+    saveWorkspace();
+
+    renderProjectSelector();
+    renderCurrentView();
+    closeProjectSettingsModal();
+}
+
+function setSprintStatus(sprintId, status) {
+    const project = getActiveProject();
+    const sprint = project.sprints.find(s => s.id === sprintId);
+    if (!sprint) return;
+
+    if (status === 'active') {
+        const currentActive = (project.sprints || []).find(s => s.status === 'active' && s.id !== sprintId);
+        if (currentActive) {
+            alert(`Já existe um Sprint ativo ("${currentActive.name}"). Conclua o Sprint ativo antes de iniciar um novo.`);
+            return;
+        }
+    }
+
+    if (status === 'completed') {
+        if (!confirm(`Concluir o Sprint "${sprint.name}"? As tarefas não concluídas voltarão para o Backlog Geral.`)) {
+            return;
+        }
+        // Return incomplete tasks to Backlog
+        project.issues.forEach(i => {
+            if (i.sprintId === sprintId && i.status !== 'done') {
+                i.status = 'backlog';
+                i.sprintId = null;
+            }
+        });
+    }
+
+    sprint.status = status;
+    saveWorkspace();
+    renderCurrentView();
+}
+
+function deleteSprint(sprintId) {
+    const project = getActiveProject();
+    const sprint = project.sprints.find(s => s.id === sprintId);
+    if (!sprint) return;
+
+    if (confirm(`Eliminar o sprint "${sprint.name}"? As tarefas associadas voltarão ao Backlog geral.`)) {
+        project.sprints = project.sprints.filter(s => s.id !== sprintId);
+        project.issues.forEach(i => {
+            if (i.sprintId === sprintId) i.sprintId = null;
+        });
+
+        saveWorkspace();
+        renderCurrentView();
     }
 }
 
@@ -243,24 +377,29 @@ function openAddColumnModal() {
 
     project.columns.push({ id: colId, title: title.trim() });
     saveWorkspace();
-    renderBoard();
+    renderCurrentView();
 }
 
 function deleteColumn(colId) {
     const project = getActiveProject();
-    if (project.columns.length <= 1) {
-        alert('O quadro tem de ter pelo menos 1 coluna!');
+    if (colId === 'backlog') {
+        alert('A coluna de Backlog não pode ser eliminada.');
+        return;
+    }
+
+    if (project.columns.length <= 2) {
+        alert('O quadro tem de ter pelo menos 1 coluna de trabalho além do Backlog!');
         return;
     }
 
     const col = project.columns.find(c => c.id === colId);
-    if (confirm(`Eliminar coluna "${col.title}"? Tarefas existentes serão movidas para a primeira coluna.`)) {
+    if (confirm(`Eliminar coluna "${col.title}"? Tarefas existentes serão movidas para "To Do".`)) {
         project.columns = project.columns.filter(c => c.id !== colId);
-        const fallbackId = project.columns[0].id;
+        const fallbackId = project.columns.find(c => c.id !== 'backlog')?.id || 'todo';
         project.issues.forEach(i => { if (i.status === colId) i.status = fallbackId; });
 
         saveWorkspace();
-        renderBoard();
+        renderCurrentView();
     }
 }
 
@@ -269,28 +408,79 @@ function updateFilterDropdowns() {
     const project = getActiveProject();
     const epicSelect = document.getElementById('filterEpic');
     const currentEpic = epicSelect.value;
-    const uniqueEpics = [...new Set(project.issues.map(i => i.epic))].sort();
+    const allEpics = [...new Set([...(project.epics || []), ...project.issues.map(i => i.epic)])].filter(Boolean).sort();
 
     let epicHTML = '<option value="Todos">Todos</option>';
-    uniqueEpics.forEach(epic => epicHTML += `<option value="${epic}">${epic}</option>`);
+    allEpics.forEach(epic => epicHTML += `<option value="${escapeHTML(epic)}">${escapeHTML(epic)}</option>`);
 
     epicSelect.innerHTML = epicHTML;
-    epicSelect.value = (currentEpic === "Todos" || uniqueEpics.includes(currentEpic)) ? currentEpic : "Todos";
+    epicSelect.value = (currentEpic === "Todos" || allEpics.includes(currentEpic)) ? currentEpic : "Todos";
+
+    // Sprint Filter
+    const sprintSelect = document.getElementById('filterSprint');
+    if (sprintSelect) {
+        const currentSprint = sprintSelect.value;
+        let sprintHTML = '<option value="Todos">Todos os Sprints</option>';
+        sprintHTML += '<option value="none">Sem Sprint (Apenas Backlog)</option>';
+        (project.sprints || []).forEach(s => {
+            sprintHTML += `<option value="${s.id}">${escapeHTML(s.name)}</option>`;
+        });
+        sprintSelect.innerHTML = sprintHTML;
+        sprintSelect.value = (currentSprint === "Todos" || currentSprint === "none" || (project.sprints || []).some(s => s.id === currentSprint)) ? currentSprint : "Todos";
+    }
+
+    // Update Backlog badge in tab
+    const backlogCount = project.issues.filter(i => i.status === 'backlog' || !i.sprintId).length;
+    const backlogBadge = document.getElementById('backlogCountBadge');
+    if (backlogBadge) backlogBadge.innerText = backlogCount;
 }
 
-// Render Board
+// Render Controller
+function renderCurrentView() {
+    updateFilterDropdowns();
+    updateFilterBadgeCount();
+
+    if (currentView === 'board') {
+        renderBoard();
+    } else {
+        renderBacklogView();
+    }
+}
+
+// Render Board (Kanban View)
 function renderBoard() {
     const project = getActiveProject();
     const boardWrapper = document.getElementById('boardWrapper');
     boardWrapper.innerHTML = '';
 
     const filterEpic = document.getElementById('filterEpic').value;
+    const filterSprint = document.getElementById('filterSprint')?.value || 'Todos';
     const filterPriority = document.getElementById('filterPriority').value;
     const filterType = document.getElementById('filterType').value;
     const searchText = document.getElementById('searchInput').value.toLowerCase().trim();
 
-    // Render Columns
-    project.columns.forEach(col => {
+    // Check Active Sprints
+    const activeSprints = (project.sprints || []).filter(s => s.status === 'active');
+
+    // If no active sprint, display friendly empty state banner
+    if (activeSprints.length === 0) {
+        boardWrapper.innerHTML = `
+            <div class="empty-board-banner" style="width:100%; max-width:640px; margin:40px auto; text-align:center; padding:48px 24px; background:var(--bg-card); border:2px dashed var(--border); border-radius:var(--radius); box-shadow:var(--shadow-sm);">
+                <span style="font-size:48px; display:block; margin-bottom:12px;">🏃💨</span>
+                <h3 style="font-size:20px; font-weight:800; margin:0 0 8px 0; color:var(--text-main);">Nenhum Sprint Ativo no Quadro</h3>
+                <p style="color:var(--text-muted); font-size:14px; margin:0 0 20px 0; line-height:1.5;">
+                    Vá ao Backlog para planear as suas tarefas num Sprint/Release e clique em <strong style="color:var(--primary);">"▶️ Iniciar Sprint"</strong> para ativar o quadro.
+                </p>
+                <button class="btn-primary" onclick="switchView('backlog')" style="font-size:14px; padding:10px 20px;">📋 Ir para o Backlog & Planear Sprint</button>
+            </div>
+        `;
+        return;
+    }
+
+    // Render Working Columns Only (exclude Backlog column)
+    const activeBoardColumns = project.columns.filter(c => c.id !== 'backlog');
+
+    activeBoardColumns.forEach(col => {
         const colElem = document.createElement('div');
         colElem.className = 'column';
         colElem.id = col.id;
@@ -320,11 +510,19 @@ function renderBoard() {
     boardWrapper.appendChild(addColBtn);
 
     let counts = {};
-    project.columns.forEach(c => counts[c.id] = 0);
+    activeBoardColumns.forEach(c => counts[c.id] = 0);
 
-    // Filter Issues
+    // Filter & Render Issues for Active Sprints Only
     project.issues.forEach(issue => {
+        // Only display issue if it belongs to an active sprint
+        const isIssueInActiveSprint = activeSprints.some(s => s.id === issue.sprintId);
+        if (!isIssueInActiveSprint) return;
+
         if (filterEpic !== "Todos" && issue.epic !== filterEpic) return;
+        if (filterSprint !== "Todos") {
+            if (filterSprint === "none" && issue.sprintId) return;
+            if (filterSprint !== "none" && issue.sprintId !== filterSprint) return;
+        }
         if (filterPriority !== "Todos" && issue.priority !== filterPriority) return;
         if (filterType !== "Todos" && issue.type !== filterType) return;
         if (searchText && !issue.title.toLowerCase().includes(searchText) && 
@@ -354,6 +552,8 @@ function renderBoard() {
         const totalSubtasks = subtasks.length;
         const progressPercent = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
 
+        const assignedSprint = (project.sprints || []).find(s => s.id === issue.sprintId);
+
         card.innerHTML = `
             <div class="ticket-header">
                 <div class="ticket-type-id">
@@ -378,6 +578,7 @@ function renderBoard() {
             ` : ''}
 
             <div class="ticket-footer">
+                ${assignedSprint ? `<span class="sprint-badge" title="Sprint">🏃 ${escapeHTML(assignedSprint.name.split('-')[0].trim())}</span>` : ''}
                 <span class="badge ticket-epic">${escapeHTML(issue.epic)}</span>
                 <span class="badge priority-${issue.priority}">${priorityEmoji} ${issue.priority}</span>
                 ${issue.storyPoints ? `<span class="story-points-badge">${issue.storyPoints} pt</span>` : ''}
@@ -385,7 +586,7 @@ function renderBoard() {
             </div>
         `;
 
-        const container = document.getElementById(`container-${issue.status}`) || document.getElementById(`container-${project.columns[0].id}`);
+        const container = document.getElementById(`container-${issue.status}`) || document.getElementById(`container-${activeBoardColumns[0].id}`);
         if (container) {
             container.appendChild(card);
             if (counts[issue.status] !== undefined) counts[issue.status]++;
@@ -398,6 +599,330 @@ function renderBoard() {
     });
 }
 
+// Render Backlog View with 2-Box Split Layout (Left: Sprints/Releases, Right: Issues Pool)
+function renderBacklogView() {
+    const project = getActiveProject();
+    const backlogContainer = document.getElementById('backlogViewContainer');
+    backlogContainer.innerHTML = '';
+
+    const filterEpic = document.getElementById('filterEpic').value;
+    const filterPriority = document.getElementById('filterPriority').value;
+    const filterType = document.getElementById('filterType').value;
+    const searchText = document.getElementById('searchInput').value.toLowerCase().trim();
+
+    // Filter Issues
+    const filteredIssues = project.issues.filter(issue => {
+        if (filterEpic !== "Todos" && issue.epic !== filterEpic) return false;
+        if (filterPriority !== "Todos" && issue.priority !== filterPriority) return false;
+        if (filterType !== "Todos" && issue.type !== filterType) return false;
+        if (searchText && !issue.title.toLowerCase().includes(searchText) && 
+            !issue.id.toLowerCase().includes(searchText) && 
+            !(issue.description || '').toLowerCase().includes(searchText)) {
+            return false;
+        }
+        return true;
+    });
+
+    const splitLayout = document.createElement('div');
+    splitLayout.className = 'backlog-split-layout';
+
+    // LEFT BOX: Sprints & Releases Planning
+    const leftBox = document.createElement('div');
+    leftBox.className = 'backlog-box';
+
+    const inlineCreateHTML = `
+        <div class="backlog-section-header">
+            <h3 class="backlog-section-title">🏃 Sprints & Releases</h3>
+        </div>
+        <div class="inline-create-sprint">
+            <input type="text" id="inlineSprintName" placeholder="Ex: Sprint 1 - Lançamento MVP..." onkeydown="if(event.key==='Enter') createInlineSprint()">
+            <input type="text" id="inlineSprintGoal" placeholder="Objetivo do Sprint (opcional)..." onkeydown="if(event.key==='Enter') createInlineSprint()">
+            <button class="btn-primary" style="align-self:flex-end; font-size:13px;" onclick="createInlineSprint()">+ Criar Sprint / Release</button>
+        </div>
+        <div id="leftSprintsList" style="display:flex; flex-direction:column; gap:16px; margin-top:8px;"></div>
+    `;
+    leftBox.innerHTML = inlineCreateHTML;
+    splitLayout.appendChild(leftBox);
+
+    // RIGHT BOX: Issues to Solve (Unassigned Backlog Pool)
+    const rightBox = document.createElement('div');
+    rightBox.className = 'backlog-box';
+
+    const backlogPoolIssues = filteredIssues.filter(i => !i.sprintId || i.status === 'backlog');
+
+    const poolDropzoneId = 'backlog-pool-dropzone';
+    rightBox.innerHTML = `
+        <div class="backlog-section-header">
+            <h3 class="backlog-section-title">
+                📋 Tarefas a Resolver
+                <span class="backlog-section-count">${backlogPoolIssues.length} tarefas</span>
+            </h3>
+            <button class="btn-primary" onclick="openCreateModalWithStatus('backlog')">+ Nova Tarefa</button>
+        </div>
+        <div class="sprint-dropzone" id="${poolDropzoneId}" 
+             style="min-height:380px; flex:1;"
+             ondragover="sprintDragOver(event)" 
+             ondragleave="sprintDragLeave(event)" 
+             ondrop="sprintDrop(event, null)">
+        </div>
+    `;
+    splitLayout.appendChild(rightBox);
+
+    backlogContainer.appendChild(splitLayout);
+
+    // Populate Left Box Sprints
+    const leftSprintsList = document.getElementById('leftSprintsList');
+    const sprints = project.sprints || [];
+
+    if (sprints.length === 0) {
+        leftSprintsList.innerHTML = `<p style="color:var(--text-muted); font-size:13px; font-style:italic;">Nenhum Sprint criado. Crie um Sprint acima para começar a planear.</p>`;
+    } else {
+        sprints.forEach(sprint => {
+            const sprintContainer = document.createElement('div');
+            const isActive = sprint.status === 'active';
+            sprintContainer.className = `sprint-container ${isActive ? 'sprint-active-border' : ''}`;
+
+            const sprintIssues = filteredIssues.filter(i => i.sprintId === sprint.id);
+            const totalPoints = sprintIssues.reduce((sum, i) => sum + (i.storyPoints || 0), 0);
+
+            const statusTagClass = {
+                'active': 'sprint-status-active',
+                'planned': 'sprint-status-planned',
+                'completed': 'sprint-status-completed'
+            }[sprint.status] || 'sprint-status-planned';
+
+            const statusText = {
+                'active': '🟢 Sprint Ativo',
+                'planned': '🔵 Planeado',
+                'completed': '⚪ Concluído'
+            }[sprint.status] || 'Planeado';
+
+            const dropzoneId = `sprint-dropzone-${sprint.id}`;
+
+            let actionBtnHTML = '';
+            if (sprint.status === 'planned') {
+                actionBtnHTML = `<button class="btn-start-sprint" onclick="startSprint('${sprint.id}')">▶️ Iniciar Sprint</button>`;
+            } else if (sprint.status === 'active') {
+                actionBtnHTML = `<button class="btn-secondary" style="font-size:12px; padding:4px 8px;" onclick="setSprintStatus('${sprint.id}', 'completed')">✅ Concluir</button>`;
+            } else {
+                actionBtnHTML = `<button class="btn-secondary" style="font-size:12px; padding:4px 8px;" onclick="setSprintStatus('${sprint.id}', 'planned')">↩️ Reabrir</button>`;
+            }
+
+            sprintContainer.innerHTML = `
+                <div class="sprint-header">
+                    <div class="sprint-title-group">
+                        <h4 class="sprint-name">🏃 ${escapeHTML(sprint.name)}</h4>
+                        <span class="sprint-status-tag ${statusTagClass}">${statusText}</span>
+                    </div>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        ${actionBtnHTML}
+                        <button class="icon-btn" onclick="deleteSprint('${sprint.id}')" title="Eliminar Sprint">🗑️</button>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted);">
+                    <span>${sprint.goal ? `🎯 ${escapeHTML(sprint.goal)}` : ''}</span>
+                    <span>📊 ${sprintIssues.length} tarefas (${totalPoints} pts)</span>
+                </div>
+                
+                <div class="sprint-dropzone" id="${dropzoneId}" 
+                     ondragover="sprintDragOver(event)" 
+                     ondragleave="sprintDragLeave(event)" 
+                     ondrop="sprintDrop(event, '${sprint.id}')">
+                </div>
+            `;
+
+            leftSprintsList.appendChild(sprintContainer);
+
+            const dropzone = document.getElementById(dropzoneId);
+            sprintIssues.forEach(issue => {
+                dropzone.appendChild(createBacklogItemElement(issue, project));
+            });
+        });
+    }
+
+    // Populate Right Box Pool Items
+    const poolDropzone = document.getElementById(poolDropzoneId);
+    if (backlogPoolIssues.length === 0) {
+        poolDropzone.innerHTML = `
+            <div class="empty-backlog-state">
+                <span>🎉</span>
+                <p>Nenhuma tarefa pendente no Backlog Geral!</p>
+            </div>
+        `;
+    } else {
+        backlogPoolIssues.forEach(issue => {
+            poolDropzone.appendChild(createBacklogItemElement(issue, project));
+        });
+    }
+}
+
+function startSprint(sprintId) {
+    const project = getActiveProject();
+    const sprint = (project.sprints || []).find(s => s.id === sprintId);
+    if (!sprint) return;
+
+    const currentActive = (project.sprints || []).find(s => s.status === 'active' && s.id !== sprintId);
+    if (currentActive) {
+        alert(`Já existe um Sprint ativo ("${currentActive.name}"). Conclua o Sprint ativo antes de iniciar um novo.`);
+        return;
+    }
+
+    sprint.status = 'active';
+
+    // Move all sprint issues from backlog status to todo status
+    project.issues.forEach(i => {
+        if (i.sprintId === sprintId && i.status === 'backlog') {
+            i.status = 'todo';
+        }
+    });
+
+    saveWorkspace();
+
+    // Automatically transition user to active board!
+    switchView('board');
+}
+
+function createInlineSprint() {
+    const nameInput = document.getElementById('inlineSprintName');
+    const goalInput = document.getElementById('inlineSprintGoal');
+    if (!nameInput) return;
+
+    const name = nameInput.value.trim();
+    const goal = goalInput ? goalInput.value.trim() : '';
+
+    if (!name) {
+        alert('Insira um nome para o Sprint ou Release.');
+        return;
+    }
+
+    const project = getActiveProject();
+    if (!project.sprints) project.sprints = [];
+
+    project.sprints.push({
+        id: `sprint-${Date.now()}`,
+        name: name,
+        goal: goal,
+        startDate: new Date().toISOString().slice(0, 10),
+        endDate: '',
+        status: 'planned'
+    });
+
+    saveWorkspace();
+    renderCurrentView();
+}
+
+function createBacklogItemElement(issue, project) {
+    const card = document.createElement('div');
+    card.className = 'backlog-item-card';
+    card.draggable = true;
+    card.id = `backlog-card-${issue.id}`;
+    card.ondragstart = (ev) => {
+        draggedTicketId = issue.id;
+        ev.dataTransfer.setData("text/plain", issue.id);
+        ev.dataTransfer.effectAllowed = "move";
+    };
+
+    const typeIcon = ISSUE_TYPE_ICONS[issue.type] || '📑';
+    const priorityEmoji = { 'Alta': '🔴', 'Média': '🟡', 'Baixa': '🟢' }[issue.priority] || '🟡';
+    const colTitle = project.columns.find(c => c.id === issue.status)?.title || issue.status;
+
+    let moveSprintOptions = `<option value="" disabled selected>🏃 Atribuir Sprint...</option>`;
+    moveSprintOptions += `<option value="none">Nenhum (Backlog Geral)</option>`;
+    (project.sprints || []).forEach(s => {
+        moveSprintOptions += `<option value="${s.id}" ${issue.sprintId === s.id ? 'disabled' : ''}>${escapeHTML(s.name)}</option>`;
+    });
+
+    card.innerHTML = `
+        <div class="backlog-item-main">
+            <span style="font-size:18px;">${typeIcon}</span>
+            <div class="backlog-item-title-group">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="ticket-id">${issue.id}</span>
+                    <span class="backlog-item-title">${escapeHTML(issue.title)}</span>
+                </div>
+                <div class="backlog-item-meta">
+                    <span class="badge" style="background:var(--primary-light); color:var(--primary); font-weight:700;">📍 ${escapeHTML(colTitle)}</span>
+                    <span class="badge ticket-epic">${escapeHTML(issue.epic)}</span>
+                    <span class="badge priority-${issue.priority}">${priorityEmoji} ${issue.priority}</span>
+                    ${issue.storyPoints ? `<span class="story-points-badge">${issue.storyPoints} pt</span>` : ''}
+                    ${issue.assignee ? `<span style="font-size:12px; color:var(--text-muted);">👤 ${escapeHTML(issue.assignee)}</span>` : ''}
+                </div>
+            </div>
+        </div>
+        <div class="backlog-item-actions">
+            <select class="move-to-select" onchange="moveTicketToSprint('${issue.id}', this.value); this.value='';">
+                ${moveSprintOptions}
+            </select>
+            <button class="icon-btn" onclick="openEditModal('${issue.id}')" title="Editar Tarefa">✏️</button>
+            <button class="icon-btn" onclick="deleteTicket('${issue.id}')" title="Eliminar Tarefa">🗑️</button>
+        </div>
+    `;
+
+    card.onclick = (e) => {
+        if (!e.target.closest('.backlog-item-actions')) {
+            openEditModal(issue.id);
+        }
+    };
+
+    return card;
+}
+
+// Sprint Drag and Drop Handlers
+function sprintDragOver(ev) {
+    ev.preventDefault();
+    ev.dataTransfer.dropEffect = "move";
+    const dropzone = ev.currentTarget;
+    dropzone.classList.add('sprint-drag-over');
+}
+
+function sprintDragLeave(ev) {
+    const dropzone = ev.currentTarget;
+    dropzone.classList.remove('sprint-drag-over');
+}
+
+function sprintDrop(ev, targetSprintId) {
+    ev.preventDefault();
+    const dropzone = ev.currentTarget;
+    dropzone.classList.remove('sprint-drag-over');
+
+    if (draggedTicketId) {
+        moveTicketToSprint(draggedTicketId, targetSprintId === 'null' ? null : targetSprintId);
+        draggedTicketId = null;
+    }
+}
+
+function moveTicketToSprint(ticketId, sprintId) {
+    const project = getActiveProject();
+    const issue = project.issues.find(i => i.id === ticketId);
+    if (issue) {
+        issue.sprintId = (!sprintId || sprintId === 'none' || sprintId === 'null') ? null : sprintId;
+        // If moving to a sprint from backlog status, update status to To Do automatically
+        if (issue.sprintId && issue.status === 'backlog') {
+            issue.status = 'todo';
+        }
+        saveWorkspace();
+        renderCurrentView();
+    }
+}
+
+function moveToStatus(issueId, newStatus) {
+    if (!newStatus) return;
+    const project = getActiveProject();
+    const issue = project.issues.find(i => i.id === issueId);
+    if (issue) {
+        issue.status = newStatus;
+        saveWorkspace();
+        renderCurrentView();
+    }
+}
+
+function openCreateModalWithStatus(status) {
+    openCreateModal();
+    if (status) {
+        document.getElementById('taskStatus').value = status;
+    }
+}
+
 function generateNextId() {
     const project = getActiveProject();
     if (project.issues.length === 0) return `${project.key}-1`;
@@ -407,18 +932,20 @@ function generateNextId() {
 
 // Unified Task Modal Handlers
 function openCreateModal() {
+    const project = getActiveProject();
     currentEditingId = null;
     document.getElementById('taskModalTitle').innerText = 'Criar Nova Tarefa';
     document.getElementById('taskTitle').value = '';
     document.getElementById('taskDescription').value = '';
     document.getElementById('taskType').value = 'Task';
-    document.getElementById('taskEpic').value = 'Epic 1: Geoespacial';
     document.getElementById('taskPriority').value = 'Média';
     document.getElementById('taskStoryPoints').value = '3';
     document.getElementById('taskAssignee').value = 'Marcelo';
     document.getElementById('deleteTaskModalBtn').style.display = 'none';
 
+    populateTaskEpicDropdown(project.epics?.[0] || '');
     populateTaskStatusDropdown();
+    populateTaskSprintDropdown();
     renderModalSubtasks([]);
     document.getElementById('taskModalOverlay').classList.add('active');
 }
@@ -433,15 +960,83 @@ function openEditModal(id) {
     document.getElementById('taskTitle').value = issue.title;
     document.getElementById('taskDescription').value = issue.description || '';
     document.getElementById('taskType').value = issue.type || 'Task';
-    document.getElementById('taskEpic').value = issue.epic || 'Outro';
     document.getElementById('taskPriority').value = issue.priority || 'Média';
     document.getElementById('taskStoryPoints').value = issue.storyPoints || 1;
     document.getElementById('taskAssignee').value = issue.assignee || '';
     document.getElementById('deleteTaskModalBtn').style.display = 'block';
 
+    populateTaskEpicDropdown(issue.epic || project.epics?.[0]);
     populateTaskStatusDropdown(issue.status);
+    populateTaskSprintDropdown(issue.sprintId);
     renderModalSubtasks(issue.subtasks || []);
     document.getElementById('taskModalOverlay').classList.add('active');
+}
+
+function populateTaskEpicDropdown(selectedEpic) {
+    const project = getActiveProject();
+    const epicSelect = document.getElementById('taskEpic');
+    if (!epicSelect) return;
+
+    epicSelect.innerHTML = '';
+    const epics = project.epics || [];
+
+    if (epics.length === 0) {
+        const emptyOpt = document.createElement('option');
+        emptyOpt.value = '';
+        emptyOpt.textContent = 'Sem Épico (Clique em + Criar Épico)';
+        epicSelect.appendChild(emptyOpt);
+    } else {
+        const noneOpt = document.createElement('option');
+        noneOpt.value = '';
+        noneOpt.textContent = 'Sem Épico';
+        if (!selectedEpic) noneOpt.selected = true;
+        epicSelect.appendChild(noneOpt);
+
+        epics.forEach(epic => {
+            const option = document.createElement('option');
+            option.value = epic;
+            option.textContent = epic;
+            if (epic === selectedEpic) option.selected = true;
+            epicSelect.appendChild(option);
+        });
+    }
+
+    const createOpt = document.createElement('option');
+    createOpt.value = '__new_epic__';
+    createOpt.textContent = '➕ Criar Novo Épico...';
+    epicSelect.appendChild(createOpt);
+}
+
+function handleTaskEpicChange(value) {
+    if (value === '__new_epic__') {
+        openCreateEpicPrompt();
+    }
+}
+
+function openCreateEpicPrompt() {
+    const name = prompt('Nome do novo Épico (ex: Design System, Checkout, Infraestrutura):');
+    if (name && name.trim()) {
+        createNewEpic(name.trim());
+    } else {
+        const project = getActiveProject();
+        const currentVal = document.getElementById('taskEpic').value;
+        if (currentVal === '__new_epic__') {
+            populateTaskEpicDropdown(project.epics?.[0] || '');
+        }
+    }
+}
+
+function createNewEpic(epicName) {
+    const project = getActiveProject();
+    if (!project.epics) project.epics = [];
+
+    if (!project.epics.includes(epicName)) {
+        project.epics.push(epicName);
+        saveWorkspace();
+    }
+
+    populateTaskEpicDropdown(epicName);
+    updateFilterDropdowns();
 }
 
 function populateTaskStatusDropdown(selectedStatus) {
@@ -451,9 +1046,31 @@ function populateTaskStatusDropdown(selectedStatus) {
     project.columns.forEach(col => {
         const option = document.createElement('option');
         option.value = col.id;
-        option.textContent = col.title;
+        const icon = col.id === 'backlog' ? '📋 ' : '';
+        option.textContent = `${icon}${col.title}`;
         if (col.id === (selectedStatus || project.columns[0].id)) option.selected = true;
         statusSelect.appendChild(option);
+    });
+}
+
+function populateTaskSprintDropdown(selectedSprintId) {
+    const project = getActiveProject();
+    const sprintSelect = document.getElementById('taskSprint');
+    if (!sprintSelect) return;
+
+    sprintSelect.innerHTML = '';
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = 'Sem Sprint (Backlog)';
+    if (!selectedSprintId) defaultOpt.selected = true;
+    sprintSelect.appendChild(defaultOpt);
+
+    (project.sprints || []).forEach(s => {
+        const option = document.createElement('option');
+        option.value = s.id;
+        option.textContent = `🏃 ${s.name}`;
+        if (s.id === selectedSprintId) option.selected = true;
+        sprintSelect.appendChild(option);
     });
 }
 
@@ -468,6 +1085,7 @@ function saveTaskModal() {
     const type = document.getElementById('taskType').value;
     const desc = document.getElementById('taskDescription').value.trim();
     const epic = document.getElementById('taskEpic').value;
+    const sprintId = document.getElementById('taskSprint').value || null;
     const priority = document.getElementById('taskPriority').value;
     const points = parseInt(document.getElementById('taskStoryPoints').value) || 1;
     const assignee = document.getElementById('taskAssignee').value.trim();
@@ -481,6 +1099,7 @@ function saveTaskModal() {
             issue.description = desc;
             issue.type = type;
             issue.epic = epic;
+            issue.sprintId = sprintId;
             issue.priority = priority;
             issue.storyPoints = points;
             issue.assignee = assignee;
@@ -494,6 +1113,7 @@ function saveTaskModal() {
             description: desc,
             type: type,
             epic: epic,
+            sprintId: sprintId,
             priority: priority,
             storyPoints: points,
             assignee: assignee,
@@ -504,8 +1124,7 @@ function saveTaskModal() {
     }
 
     saveWorkspace();
-    updateFilterDropdowns();
-    renderBoard();
+    renderCurrentView();
     closeTaskModal();
 }
 
@@ -574,12 +1193,11 @@ function deleteTicket(id) {
     if (confirm(`Eliminar a tarefa ${id}?`)) {
         project.issues = project.issues.filter(i => i.id !== id);
         saveWorkspace();
-        updateFilterDropdowns();
-        renderBoard();
+        renderCurrentView();
     }
 }
 
-// Drag & Drop
+// Drag & Drop for Board
 function dragStart(ev) {
     draggedTicketId = ev.target.id;
     ev.dataTransfer.setData("text/plain", ev.target.id);
@@ -621,7 +1239,7 @@ function drop(ev) {
         if (issue && issue.status !== targetCol.id) {
             issue.status = targetCol.id;
             saveWorkspace();
-            renderBoard();
+            renderCurrentView();
         }
     }
 }
@@ -629,12 +1247,13 @@ function drop(ev) {
 // CSV Export / Import
 function exportCSV() {
     const project = getActiveProject();
-    let csvContent = "data:text/csv;charset=utf-8,ID,Tipo,Titulo,Descricao,Epico,Prioridade,Pontos,Atribuido,Status\n";
+    let csvContent = "data:text/csv;charset=utf-8,ID,Tipo,Titulo,Descricao,Epico,Sprint,Prioridade,Pontos,Atribuido,Status\n";
     project.issues.forEach(i => {
         const title = `"${(i.title || '').replace(/"/g, '""')}"`;
         const desc = `"${(i.description || '').replace(/"/g, '""')}"`;
         const epic = `"${(i.epic || '').replace(/"/g, '""')}"`;
-        csvContent += `${i.id},${i.type || 'Task'},${title},${desc},${epic},${i.priority || 'Média'},${i.storyPoints || 1},"${i.assignee || ''}",${i.status}\n`;
+        const sprintName = (project.sprints || []).find(s => s.id === i.sprintId)?.name || '';
+        csvContent += `${i.id},${i.type || 'Task'},${title},${desc},${epic},"${sprintName}",${i.priority || 'Média'},${i.storyPoints || 1},"${i.assignee || ''}",${i.status}\n`;
     });
 
     const encodedUri = encodeURI(csvContent);
@@ -666,13 +1285,13 @@ function importCSV(event) {
             const title = cols[2] || "Sem Título";
             const description = cols[3] || "";
             const epic = cols[4] || "Outro";
-            const priority = ["Alta", "Média", "Baixa"].includes(cols[5]) ? cols[5] : "Média";
-            const points = parseInt(cols[6]) || 1;
-            const assignee = cols[7] || "Marcelo";
-            let status = (cols[8] || project.columns[0].id).toLowerCase();
+            const priority = ["Alta", "Média", "Baixa"].includes(cols[6]) ? cols[6] : "Média";
+            const points = parseInt(cols[7]) || 1;
+            const assignee = cols[8] || "Marcelo";
+            let status = (cols[9] || project.columns[0].id).toLowerCase();
 
             const existingIndex = project.issues.findIndex(iss => iss.id === id);
-            const issueData = { id, type, title, description, epic, priority, storyPoints: points, assignee, status, subtasks: [] };
+            const issueData = { id, type, title, description, epic, priority, storyPoints: points, assignee, status, sprintId: null, subtasks: [] };
             
             if (existingIndex > -1) {
                 project.issues[existingIndex] = issueData;
@@ -681,8 +1300,7 @@ function importCSV(event) {
             }
         }
         saveWorkspace();
-        updateFilterDropdowns();
-        renderBoard();
+        renderCurrentView();
         event.target.value = '';
     };
     reader.readAsText(file);
@@ -693,8 +1311,7 @@ function clearBoard() {
     if (confirm(`Apagar TODAS as tarefas do projeto ${project.name}?`)) {
         project.issues = [];
         saveWorkspace();
-        updateFilterDropdowns();
-        renderBoard();
+        renderCurrentView();
     }
 }
 
@@ -705,5 +1322,4 @@ function escapeHTML(str) {
 
 // Initial Initialization
 renderProjectSelector();
-updateFilterDropdowns();
-renderBoard();
+renderCurrentView();
