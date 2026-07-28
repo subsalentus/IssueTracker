@@ -32,14 +32,14 @@
 }
 
 [data-theme="dark"] {
-    --bg-page: #0f172a;
-    --bg-card: #1e293b;
-    --bg-board: #0f172a;
-    --bg-input: #1e293b;
+    --bg-page: #242426;
+    --bg-card: #313536;
+    --bg-board: #2a2d2e;
+    --bg-input: #313536;
     --text-main: #f8fafc;
     --text-muted: #94a3b8;
-    --border: #334155;
-    --border-hover: #475569;
+    --border: #424647;
+    --border-hover: #525758;
     --primary: #3b82f6;
     --primary-hover: #60a5fa;
     --primary-light: #1e3a8a;
@@ -54,12 +54,12 @@
     --priority-low-bg: #14532d;
     --priority-low-text: #86efac;
     
-    --drop-zone-bg: #1e3a8a;
+    --drop-zone-bg: #2b3445;
     --drop-zone-border: #60a5fa;
     
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
 }
 
 /* Base Styles */
@@ -390,15 +390,16 @@ button,
 
 .board-wrapper {
     display: flex;
-    gap: 16px;
+    gap: 20px;
     align-items: flex-start;
     overflow-x: auto;
-    padding-bottom: 16px;
+    padding: 4px 4px 16px 4px;
     flex: 1;
 }
 
 .column {
     background-color: var(--bg-board);
+    border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 16px;
     min-width: 320px;
@@ -406,13 +407,16 @@ button,
     min-height: 540px;
     display: flex;
     flex-direction: column;
-    border: 2px dashed transparent;
+    box-shadow: var(--shadow-sm);
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
     flex-shrink: 0;
 }
 
 .column.drag-over {
     background-color: var(--drop-zone-bg);
-    border-color: var(--drop-zone-border);
+    border: 2px dashed var(--primary);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+    transform: translateY(-2px);
 }
 
 .column-header {
@@ -1232,6 +1236,8 @@ button,
     display: flex;
     flex-direction: column;
     background: var(--bg-page);
+    padding: 24px 28px;
+    gap: 20px;
 }
 
 /* Backlog 2-Box Split Layout & Sprint Execution */
